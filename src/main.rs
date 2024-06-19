@@ -44,6 +44,29 @@ fn main() {
             // Reset the board
             board = Board::default();
         }
+        else if input.starts_with("position fen") {
+            // Reset the board
+            input = input.replace("\n", "").replace("\r", "");
+
+            //uci fen inputs have the form:
+            // position fen r1bqkbnr/1pp1ppp1/p1n5/3p3p/3P1P2/2P2N2/PP2P1PP/RNBQKB1R w KQkq - 0 1 moves a2a3
+            //we want to just take the fen portion and parse it into a Board, then apply the moves
+            //so lets take everything after "fen" but before "moves" and put it in a string
+            let fen: String = input.split(" ").skip(2).take_while(|&x| x != "moves").collect::<Vec<&str>>().join(" ");
+            board = Board::from_fen(&fen, false).unwrap();
+            //then we we want the moves, which is everything after "moves"
+            let moves: String = input.split(" ").skip_while(|&x| x != "moves").skip(1).collect::<Vec<&str>>().join(" ");
+            let moves = moves.split(" ");
+            for m in moves {
+                match util::parse_uci_move(&board, m) {
+                    Ok(ucimove) => board.play(ucimove),
+                    Err(e) => {
+                        eprintln!("Failed to parse move: {}. Error: {:?}", m, e);
+                        break;
+                    }
+                }
+            }
+        }
          else if input.starts_with("go") {
             // Parse time controls
         //    let mut tokens = input.split(" ");
