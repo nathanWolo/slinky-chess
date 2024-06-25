@@ -3,12 +3,26 @@ use cozy_chess::*;
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 // use std::collections::HashMap;
-
+const TT_SIZE: usize = 1 << 16;
 pub struct AlphaBetaSearcher {
-    // transposition_table: HashMap<u64, i32>, // Example of long-term state
+    transposition_table: [TTEntry; TT_SIZE],
     root_best_move: Move,
     root_score: i32,
     min_val: i32,
+}
+#[derive(Clone, Copy)]
+struct TTEntry {
+    hash: u64,
+    depth: i32,
+    score: i32,
+    best_move: Move,
+    node_type: NodeType,
+}
+#[derive(Clone, Copy)]
+enum NodeType {
+    Exact,
+    LowerBound,
+    UpperBound,
 }
 
 impl AlphaBetaSearcher {
@@ -18,6 +32,13 @@ impl AlphaBetaSearcher {
             root_best_move: Move::from_str("a1a1").unwrap(),
             root_score: 0,
             min_val: -999,
+            transposition_table: [TTEntry {
+                hash: 0,
+                depth: 0,
+                score: 0,
+                best_move: Move::from_str("a1a1").unwrap(),
+                node_type: NodeType::Exact,
+            }; TT_SIZE]
         }
     }
 
@@ -57,19 +78,27 @@ impl AlphaBetaSearcher {
             return self.min_val;
         }
 
-        // Transposition table lookup (example, assuming Board implements hash function)
-        // let board_hash = board.hash();
-        // if let Some(&score) = self.transposition_table.get(&board_hash) {
-        //     return score;
-        // }
-
-        let mut best_score = -999;
-        let mut new_alpha = alpha;
+        // probe TT
+        let mut best_score: i32 = -999;
+        let mut new_alpha: i32 = alpha;
+        let mut new_beta: i32 = beta;
+        let entry: TTEntry = self.transposition_table[board.hash() as usize % TT_SIZE];
+        if entry.hash == board.hash() && entry.depth >= depth && ply != 0{
+            match entry.node_type {
+                NodeType::Exact => return entry.score,
+                NodeType::LowerBound => new_alpha = alpha.max(entry.score),
+                NodeType::UpperBound => new_beta = beta.min(entry.score),
+                // _ => (),
+            }
+            if new_alpha >= new_beta {
+                return entry.score;
+            }
+        }
         board.generate_moves(|moves: PieceMoves| {
             for m in moves {
                 let mut new_board: Board = board.clone();
                 new_board.play(m);
-                let score: i32 = -self.negamax(&new_board, depth - 1, -beta, -new_alpha, ply + 1, start_time, time_limit);
+                let score: i32 = -self.negamax(&new_board, depth - 1, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
                 if score > best_score {
                     best_score = score;
                     if (ply == 0) && (score.abs() != self.min_val.abs()) {
@@ -78,15 +107,27 @@ impl AlphaBetaSearcher {
                     }
                 }
                 new_alpha = new_alpha.max(score);
-                if new_alpha >= beta {
+                if new_alpha >= new_beta {
                     break;
                 }
             }
             false
         });
-
-        // Store result in transposition table
-        // self.transposition_table.insert(board_hash, best_score);
+        let node_type: NodeType = if best_score <= alpha {
+            NodeType::UpperBound
+        } else if best_score >= beta {
+            NodeType::LowerBound
+        } else {
+            NodeType::Exact
+        };
+        let tt_entry: TTEntry = TTEntry {
+            hash: board.hash(),
+            depth: depth,
+            score: best_score,
+            best_move: self.root_best_move,
+            node_type: node_type,
+        };
+        self.transposition_table[board.hash() as usize % TT_SIZE] = tt_entry;
         
         best_score
     }
