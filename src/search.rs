@@ -62,7 +62,7 @@ impl AlphaBetaSearcher {
         }
         score
     }
-    
+
     fn move_is_capture(&self, board: &Board, m: Move) -> bool {
         let occupant: Option<Piece> = board.piece_on(m.to);
         match occupant {
@@ -115,16 +115,53 @@ impl AlphaBetaSearcher {
         zipped.into_iter().map(|(m, _)| m).collect()
     }
 
+    fn quiesce(&self, board: &Board, alpha: i32, beta: i32) -> i32 {
+        let stand_pat: i32 = self.evaluate(board);
+        if stand_pat >= beta {
+            return beta;
+        }
+
+        let mut local_alpha: i32 = alpha.max(stand_pat);
+        let mut captures: Vec<Move> = Vec::new();
+        captures.reserve(16);
+        board.generate_moves(|p: PieceMoves| {
+            for m in p {
+                if self.move_is_capture(board, m) {
+                    captures.push(m);
+                }
+            }
+            false
+        });
+        //sort moves
+        let scores: Vec<i32> = self.score_moves(board, captures.clone(), Move::from_str("a1a1").unwrap());
+        let sorted_moves: Vec<Move> = self.sort_moves(captures.clone(), scores);
+        let mut best_score: i32 = -999;
+        for m in sorted_moves {
+            let mut new_board: Board = board.clone();
+            new_board.play(m);
+            let score: i32 = -self.quiesce(&new_board, -beta, -local_alpha);
+            if score >= beta {
+                return beta;
+            }
+            if score > best_score {
+                best_score = score;
+                local_alpha = local_alpha.max(score);
+            }
+        }
+        local_alpha
+    }
+
     fn negamax(&mut self, board: &Board, depth: i32, alpha: i32, beta: i32, ply:u32, start_time: Instant, time_limit: Duration) -> i32 {
         if board.status() != GameStatus::Ongoing {
-            return match board.status() {
-                GameStatus::Won => self.min_val + ply as i32,
-                GameStatus::Drawn => 0,
-                _ => 0,
+            match board.status() {
+                GameStatus::Won => return self.min_val + ply as i32,
+                GameStatus::Drawn => return 0,
+                _ => (),
             };
         }
         if depth == 0 {
-            return self.evaluate(board);
+            // return self.evaluate(board);
+            return self.quiesce(board, alpha, beta);
         }
         if start_time.elapsed() > time_limit {
             return self.min_val;
