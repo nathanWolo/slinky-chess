@@ -94,25 +94,50 @@ impl AlphaBetaSearcher {
                 return entry.score;
             }
         }
-        board.generate_moves(|moves: PieceMoves| {
-            for m in moves {
-                let mut new_board: Board = board.clone();
-                new_board.play(m);
-                let score: i32 = -self.negamax(&new_board, depth - 1, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
-                if score > best_score {
-                    best_score = score;
-                    if (ply == 0) && (score.abs() != self.min_val.abs()) {
-                        self.root_best_move = m;
-                        self.root_score = score;
-                    }
-                }
-                new_alpha = new_alpha.max(score);
-                if new_alpha >= new_beta {
-                    break;
-                }
+        // board.generate_moves(|moves: PieceMoves| {
+        //     for m in moves {
+        //         let mut new_board: Board = board.clone();
+        //         new_board.play(m);
+        //         let score: i32 = -self.negamax(&new_board, depth - 1, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
+        //         if score > best_score {
+        //             best_score = score;
+        //             if (ply == 0) && (score.abs() != self.min_val.abs()) {
+        //                 self.root_best_move = m;
+        //                 self.root_score = score;
+        //             }
+        //         }
+        //         new_alpha = new_alpha.max(score);
+        //         if new_alpha >= new_beta {
+        //             break;
+        //         }
+        //     }
+        //     false
+        // });
+        //generate all moves and store them in a vector
+        let mut moves: Vec<Move> = Vec::new();
+        board.generate_moves(|p: PieceMoves| {
+            for m in p {
+                moves.push(m);
             }
             false
         });
+        //search through all moves
+        for m in moves {
+            let mut new_board: Board = board.clone();
+            new_board.play(m);
+            let score: i32 = -self.negamax(&new_board, depth - 1, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
+            if score > best_score {
+                best_score = score;
+                if (ply == 0) && (score.abs() != self.min_val.abs()) {
+                    self.root_best_move = m;
+                    self.root_score = score;
+                }
+            }
+            new_alpha = new_alpha.max(score);
+            if new_alpha >= new_beta {
+                break;
+            }
+        }
         let node_type: NodeType = if best_score <= alpha {
             NodeType::UpperBound
         } else if best_score >= beta {
