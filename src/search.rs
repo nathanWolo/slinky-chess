@@ -62,8 +62,16 @@ impl AlphaBetaSearcher {
         }
         score
     }
+    
+    fn move_is_capture(&self, board: &Board, m: Move) -> bool {
+        let occupant: Option<Piece> = board.piece_on(m.to);
+        match occupant {
+            Some(_) => true,
+            None => false,
+        }
+    }
 
-    fn score_moves(&self, board: &Board, moves: Vec<Move>, tt_move: Move) -> Vec<i32> {
+    fn score_moves(&self, _board: &Board, moves: Vec<Move>, tt_move: Move) -> Vec<i32> {
         //take in a board and a list of moves and return a list of scores for each move
         let mut scores: Vec<i32> = Vec::new();
         scores.reserve(moves.len());
@@ -72,6 +80,29 @@ impl AlphaBetaSearcher {
             if m == tt_move {
                 score += 100;
             }
+            // Most valuable victim - least valuable attacker
+            if self.move_is_capture(_board, m) {
+                let target: Option<Piece> = _board.piece_on(m.to);
+                let attacker: Piece = _board.piece_on(m.from).unwrap();
+                let attacker_value: i32 = match attacker {
+                    Piece::Pawn => 1,
+                    Piece::Knight => 3,
+                    Piece::Bishop => 3,
+                    Piece::Rook => 5,
+                    Piece::Queen => 9,
+                    _ => 0,
+                };
+                let target_value: i32 = match target.unwrap() {
+                    Piece::Pawn => 1,
+                    Piece::Knight => 3,
+                    Piece::Bishop => 3,
+                    Piece::Rook => 5,
+                    Piece::Queen => 9,
+                    _ => 0,
+                };
+                score += target_value - attacker_value;
+            }
+
             scores.push(score);
         }
         scores
