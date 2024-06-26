@@ -63,6 +63,27 @@ impl AlphaBetaSearcher {
         score
     }
 
+    fn score_moves(&self, board: &Board, moves: Vec<Move>, tt_move: Move) -> Vec<i32> {
+        //take in a board and a list of moves and return a list of scores for each move
+        let mut scores: Vec<i32> = Vec::new();
+        scores.reserve(moves.len());
+        for m in moves {
+            let mut score: i32 = 0;
+            if m == tt_move {
+                score += 100;
+            }
+            scores.push(score);
+        }
+        scores
+    }
+
+    fn sort_moves(&self, moves: Vec<Move>, scores: Vec<i32>) -> Vec<Move> {
+        //take in a list of moves and a list of scores and return a list of moves sorted by score
+        let mut zipped: Vec<(Move, i32)> = moves.into_iter().zip(scores.into_iter()).collect();
+        zipped.sort_by(|a, b| b.1.cmp(&a.1));
+        zipped.into_iter().map(|(m, _)| m).collect()
+    }
+
     fn negamax(&mut self, board: &Board, depth: i32, alpha: i32, beta: i32, ply:u32, start_time: Instant, time_limit: Duration) -> i32 {
         if board.status() != GameStatus::Ongoing {
             return match board.status() {
@@ -83,6 +104,7 @@ impl AlphaBetaSearcher {
         let mut new_alpha: i32 = alpha;
         let mut new_beta: i32 = beta;
         let entry: TTEntry = self.transposition_table[board.hash() as usize % TT_SIZE];
+        let tt_move: Move = entry.best_move;
         if entry.hash == board.hash() && entry.depth >= depth && ply != 0{
             match entry.node_type {
                 NodeType::Exact => return entry.score,
@@ -94,35 +116,20 @@ impl AlphaBetaSearcher {
                 return entry.score;
             }
         }
-        // board.generate_moves(|moves: PieceMoves| {
-        //     for m in moves {
-        //         let mut new_board: Board = board.clone();
-        //         new_board.play(m);
-        //         let score: i32 = -self.negamax(&new_board, depth - 1, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
-        //         if score > best_score {
-        //             best_score = score;
-        //             if (ply == 0) && (score.abs() != self.min_val.abs()) {
-        //                 self.root_best_move = m;
-        //                 self.root_score = score;
-        //             }
-        //         }
-        //         new_alpha = new_alpha.max(score);
-        //         if new_alpha >= new_beta {
-        //             break;
-        //         }
-        //     }
-        //     false
-        // });
         //generate all moves and store them in a vector
         let mut moves: Vec<Move> = Vec::new();
+        moves.reserve(32);
         board.generate_moves(|p: PieceMoves| {
             for m in p {
                 moves.push(m);
             }
             false
         });
+        let scores: Vec<i32> = self.score_moves(board, moves.clone(), tt_move);
+        let sorted_moves: Vec<Move> = self.sort_moves(moves.clone(), scores);
+
         //search through all moves
-        for m in moves {
+        for m in sorted_moves {
             let mut new_board: Board = board.clone();
             new_board.play(m);
             let score: i32 = -self.negamax(&new_board, depth - 1, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
