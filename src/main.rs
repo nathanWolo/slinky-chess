@@ -108,7 +108,7 @@ fn main() {
                 btime / 30 + binc / 10
             };
 
-            let best_move = searcher.get_best_move(&board, thinking_time);
+            let best_move: String = searcher.get_best_move(&board, thinking_time);
             println!("bestmove {}", best_move);
         } else if input.starts_with("quit") {
             break;

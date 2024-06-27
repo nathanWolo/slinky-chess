@@ -9,6 +9,7 @@ pub struct AlphaBetaSearcher {
     root_best_move: Move,
     root_score: i32,
     min_val: i32,
+    nodes: u64,
 }
 #[derive(Clone, Copy)]
 struct TTEntry {
@@ -38,7 +39,8 @@ impl AlphaBetaSearcher {
                 score: 0,
                 best_move: Move::from_str("a1a1").unwrap(),
                 node_type: NodeType::Exact,
-            }; TT_SIZE]
+            }; TT_SIZE],
+            nodes: 0,
         }
     }
 
@@ -52,11 +54,25 @@ impl AlphaBetaSearcher {
         }
         material
     }
-
+    fn check_two_bishops(&self, board: &Board, color: Color) -> bool {
+        let bishops = board.colored_pieces(color, Piece::Bishop);
+        return bishops.len() >= 2;
+    }
     fn evaluate(&self, board: &Board) -> i32 {
-        let white_material = self.count_material(board, Color::White);
-        let black_material = self.count_material(board, Color::Black);
-        let mut score = white_material - black_material;
+        // let white_material = self.count_material(board, Color::White);
+        // let black_material = self.count_material(board, Color::Black);
+        // let mut score = white_material - black_material;
+        let mut white_score: i32 = 0;
+        let mut black_score: i32 = 0;
+        white_score += self.count_material(board, Color::White);
+        black_score += self.count_material(board, Color::Black);
+        if self.check_two_bishops(board, Color::White) {
+            white_score += 1;
+        }
+        if self.check_two_bishops(board, Color::Black) {
+            black_score += 1;
+        }
+        let mut score = white_score - black_score;
         if board.side_to_move() == Color::Black {
             score = -score;
         }
@@ -115,7 +131,9 @@ impl AlphaBetaSearcher {
         zipped.into_iter().map(|(m, _)| m).collect()
     }
 
-    fn quiesce(&self, board: &Board, alpha: i32, beta: i32) -> i32 {
+    fn quiesce(&mut self, board: &Board, alpha: i32, beta: i32) -> i32 {
+        //quiesce the position
+        self.nodes += 1;
         let stand_pat: i32 = self.evaluate(board);
         if stand_pat >= beta {
             return beta;
@@ -152,6 +170,7 @@ impl AlphaBetaSearcher {
     }
 
     fn negamax(&mut self, board: &Board, depth: i32, alpha: i32, beta: i32, ply:u32, start_time: Instant, time_limit: Duration) -> i32 {
+        self.nodes += 1;
         if board.status() != GameStatus::Ongoing {
             match board.status() {
                 GameStatus::Won => return self.min_val + ply as i32,
@@ -240,6 +259,7 @@ impl AlphaBetaSearcher {
         //do iterative deepening until we run out of time
         let mut current_depth: i32 = 1;
         let mut final_move = String::new();
+        self.nodes = 0;
         while start_time.elapsed() < time_limit {
             let score: i32 = self.negamax(board, current_depth, -1000, 1000, 0, start_time, time_limit);
             if score.abs() != self.min_val.abs() {
@@ -248,7 +268,7 @@ impl AlphaBetaSearcher {
             }
             current_depth += 1;
         }
-        println!("info depth {} score {}", current_depth - 1, self.root_score);
+        println!("info depth {} score {} NPS {}k", current_depth - 1, self.root_score, (self.nodes as f32) / (start_time.elapsed().as_secs_f32() *1000.0));
         return final_move;
     }
 }
