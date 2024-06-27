@@ -3,9 +3,9 @@ use cozy_chess::*;
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 // use std::collections::HashMap;
-const TT_SIZE: usize = 1 << 16;
+const TT_SIZE: usize = 1 << 22;
 pub struct AlphaBetaSearcher {
-    transposition_table: [TTEntry; TT_SIZE],
+    transposition_table: Vec<TTEntry>,
     root_best_move: Move,
     root_score: i32,
     min_val: i32,
@@ -29,11 +29,10 @@ enum NodeType {
 impl AlphaBetaSearcher {
     pub fn new() -> Self {
         AlphaBetaSearcher {
-            // transposition_table: HashMap::new(),
             root_best_move: Move::from_str("a1a1").unwrap(),
             root_score: 0,
             min_val: -999,
-            transposition_table: [TTEntry {
+            transposition_table: vec![TTEntry {
                 hash: 0,
                 depth: 0,
                 score: 0,
