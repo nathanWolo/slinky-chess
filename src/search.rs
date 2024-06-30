@@ -31,7 +31,7 @@ impl AlphaBetaSearcher {
         AlphaBetaSearcher {
             root_best_move: Move::from_str("a1a1").unwrap(),
             root_score: 0,
-            min_val: -999,
+            min_val: - (1 << 30),
             transposition_table: vec![TTEntry {
                 hash: 0,
                 depth: 0,
@@ -46,7 +46,7 @@ impl AlphaBetaSearcher {
     fn count_material(&self, board: &Board, color: Color) -> i32 {
         let mut material: i32 = 0;
         let pieces: [Piece; 5] = [Piece::Pawn, Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen];
-        let values: [i32; 5] = [1, 3, 3, 5, 9];
+        let values: [i32; 5] = [100, 300, 300, 500, 900];
         for (i, piece) in pieces.iter().enumerate() {
             let count: i32 = board.colored_pieces(color, *piece).len() as i32;
             material += count * values[i];
@@ -57,28 +57,71 @@ impl AlphaBetaSearcher {
         let bishops = board.colored_pieces(color, Piece::Bishop);
         return bishops.len() >= 2;
     }
+    fn check_rooks_same_file(&self, board: &Board, color: Color) -> bool {
+        let rooks = board.colored_pieces(color, Piece::Rook);
+        if rooks.len() < 2 {
+            return false;
+        }
+        let files: Vec<File> = rooks.iter().map(|s| s.file()).collect();
+        for i in 0..files.len() {
+            for j in i + 1..files.len() {
+                if files[i] == files[j] {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+    fn pawn_advancement_score(&self, board: &Board, color: Color) -> i32 {
+        let mut score: i32 = 0;
+        let pawns = board.colored_pieces(color, Piece::Pawn);
+        for p in pawns {
+            let rank: Rank = p.rank();
+            let rank_val: i32 = match rank {
+                Rank::First => 0,
+                Rank::Second => 1,
+                Rank::Third => 2,
+                Rank::Fourth => 3,
+                Rank::Fifth => 4,
+                Rank::Sixth => 5,
+                Rank::Seventh => 6,
+                Rank::Eighth => 7,
+            };
+            if color == Color::White {
+                score += rank_val;
+            } else {
+                score += 7 - rank_val;
+            }
+        }
+        score * 2
+    }
     fn evaluate(&self, board: &Board) -> i32 {
-        // let white_material = self.count_material(board, Color::White);
-        // let black_material = self.count_material(board, Color::Black);
-        // let mut score = white_material - black_material;
         let mut white_score: i32 = 0;
         let mut black_score: i32 = 0;
         white_score += self.count_material(board, Color::White);
         black_score += self.count_material(board, Color::Black);
         if self.check_two_bishops(board, Color::White) {
-            white_score += 1;
+            white_score += 30;
         }
         if self.check_two_bishops(board, Color::Black) {
-            black_score += 1;
+            black_score += 30;
         }
-        let mut score = white_score - black_score;
+        if self.check_rooks_same_file(board, Color::White) {
+            white_score += 20;
+        }
+        if self.check_rooks_same_file(board, Color::Black) {
+            black_score += 20;
+        }
+        white_score += self.pawn_advancement_score(board, Color::White);
+        black_score += self.pawn_advancement_score(board, Color::Black);
+        let mut score: i32 = white_score - black_score;
         if board.side_to_move() == Color::Black {
             score = -score;
         }
         score
     }
 
-    fn move_is_capture(&self, board: &Board, m: Move) -> bool {
+    fn move_is_capture(&self, board: &Board, m: &Move) -> bool {
         let occupant: Option<Piece> = board.piece_on(m.to);
         match occupant {
             Some(_) => true,
@@ -86,13 +129,13 @@ impl AlphaBetaSearcher {
         }
     }
 
-    fn score_moves(&self, _board: &Board, moves: Vec<Move>, tt_move: Move) -> Vec<i32> {
+    fn score_moves(&self, _board: &Board, moves: &Vec<Move>, tt_move: Move) -> Vec<i32> {
         //take in a board and a list of moves and return a list of scores for each move
         let mut scores: Vec<i32> = Vec::new();
         scores.reserve(moves.len());
         for m in moves {
             let mut score: i32 = 0;
-            if m == tt_move {
+            if *m == tt_move {
                 score += 100;
             }
             // Most valuable victim - least valuable attacker
@@ -123,11 +166,17 @@ impl AlphaBetaSearcher {
         scores
     }
 
-    fn sort_moves(&self, moves: Vec<Move>, scores: Vec<i32>) -> Vec<Move> {
-        //take in a list of moves and a list of scores and return a list of moves sorted by score
-        let mut zipped: Vec<(Move, i32)> = moves.into_iter().zip(scores.into_iter()).collect();
-        zipped.sort_by(|a, b| b.1.cmp(&a.1));
-        zipped.into_iter().map(|(m, _)| m).collect()
+    fn sort_moves(&self, moves: &mut Vec<Move>, scores: &mut Vec<i32>) {
+        let mut i = 1;
+        while i < moves.len() {
+            let mut j = i;
+            while j > 0 && scores[j] > scores[j - 1] {
+                scores.swap(j, j - 1);
+                moves.swap(j, j - 1);
+                j -= 1;
+            }
+            i += 1;
+        }
     }
 
     fn quiesce(&mut self, board: &Board, alpha: i32, beta: i32) -> i32 {
@@ -139,21 +188,21 @@ impl AlphaBetaSearcher {
         }
 
         let mut local_alpha: i32 = alpha.max(stand_pat);
-        let mut captures: Vec<Move> = Vec::new();
-        captures.reserve(16);
+        let mut moves: Vec<Move> = Vec::new();
+        moves.reserve(16);
         board.generate_moves(|p: PieceMoves| {
             for m in p {
-                if self.move_is_capture(board, m) {
-                    captures.push(m);
+                if self.move_is_capture(board, &m) {
+                    moves.push(m);
                 }
             }
             false
         });
         //sort moves
-        let scores: Vec<i32> = self.score_moves(board, captures.clone(), Move::from_str("a1a1").unwrap());
-        let sorted_moves: Vec<Move> = self.sort_moves(captures.clone(), scores);
-        let mut best_score: i32 = -999;
-        for m in sorted_moves {
+        let mut scores: Vec<i32> = self.score_moves(board, &moves, Move::from_str("a1a1").unwrap());
+        self.sort_moves(&mut moves, &mut scores);
+        let mut best_score: i32 = -self.min_val;
+        for m in moves {
             let mut new_board: Board = board.clone();
             new_board.play(m);
             let score: i32 = -self.quiesce(&new_board, -beta, -local_alpha);
@@ -172,13 +221,12 @@ impl AlphaBetaSearcher {
         self.nodes += 1;
         if board.status() != GameStatus::Ongoing {
             match board.status() {
-                GameStatus::Won => return self.min_val + ply as i32,
+                GameStatus::Won => return self.min_val + (ply as i32),
                 GameStatus::Drawn => return 0,
                 _ => (),
             };
         }
         if depth == 0 {
-            // return self.evaluate(board);
             return self.quiesce(board, alpha, beta);
         }
         if start_time.elapsed() > time_limit {
@@ -186,7 +234,7 @@ impl AlphaBetaSearcher {
         }
 
         // probe TT
-        let mut best_score: i32 = -999;
+        let mut best_score: i32 = self.min_val;
         let mut new_alpha: i32 = alpha;
         let mut new_beta: i32 = beta;
         let entry: TTEntry = self.transposition_table[board.hash() as usize % TT_SIZE];
@@ -211,11 +259,11 @@ impl AlphaBetaSearcher {
             }
             false
         });
-        let scores: Vec<i32> = self.score_moves(board, moves.clone(), tt_move);
-        let sorted_moves: Vec<Move> = self.sort_moves(moves.clone(), scores);
-
+        let mut scores: Vec<i32> = self.score_moves(board, &moves, tt_move);
+        //use insertion sort to sort moves and scores
+        self.sort_moves(&mut moves, &mut scores);
         //search through all moves
-        for m in sorted_moves {
+        for m in moves {
             let mut new_board: Board = board.clone();
             new_board.play(m);
             let score: i32 = -self.negamax(&new_board, depth - 1, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
@@ -251,23 +299,32 @@ impl AlphaBetaSearcher {
     }
 
     pub fn get_best_move(&mut self, board: &Board, thinking_time: u64) -> String {
-        // let mut best_move = String::new();
-        // let mut best_score = -1000;
         let start_time: Instant = Instant::now();
         let time_limit: Duration = Duration::from_millis(thinking_time);
         //do iterative deepening until we run out of time
         let mut current_depth: i32 = 1;
-        let mut final_move = String::new();
+        let mut final_move: String = String::new();
         self.nodes = 0;
+        self.root_best_move = Move::from_str("a1a1").unwrap();
         while start_time.elapsed() < time_limit {
-            let score: i32 = self.negamax(board, current_depth, -1000, 1000, 0, start_time, time_limit);
+            let score: i32 = self.negamax(board, current_depth, self.min_val, -self.min_val, 0, start_time, time_limit);
             if score.abs() != self.min_val.abs() {
                 // println!("info depth {} score {}", current_depth, score);
                 final_move = self.root_best_move.clone().to_string();
             }
             current_depth += 1;
         }
-        println!("info depth {} score {} NPS {}k", current_depth - 1, self.root_score, (self.nodes as f32) / (start_time.elapsed().as_secs_f32() *1000.0));
+
+        //check if final_move is legal
+        let mut legal_moves: Vec<Move> = Vec::new();
+        legal_moves.reserve(32);
+        board.generate_moves(|p: PieceMoves| {
+            for m in p {
+                legal_moves.push(m);
+            }
+            false
+        });
+        println!("info depth {} score cp {} NPS {}k", current_depth - 1, self.root_score, (self.nodes as f32) / (start_time.elapsed().as_secs_f32() *1000.0));
         return final_move;
     }
 }
