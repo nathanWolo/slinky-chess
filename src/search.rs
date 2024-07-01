@@ -136,7 +136,7 @@ impl AlphaBetaSearcher {
         for m in moves {
             let mut score: i32 = 0;
             if *m == tt_move {
-                score += 100;
+                score += 1000;
             }
             // Most valuable victim - least valuable attacker
             if self.move_is_capture(_board, m) {
@@ -158,7 +158,7 @@ impl AlphaBetaSearcher {
                     Piece::Queen => 9,
                     _ => 0,
                 };
-                score += target_value - attacker_value;
+                score += target_value - attacker_value + 100;
             }
 
             scores.push(score);
