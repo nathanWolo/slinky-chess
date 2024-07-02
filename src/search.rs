@@ -10,6 +10,7 @@ pub struct AlphaBetaSearcher {
     root_score: i32,
     min_val: i32,
     nodes: u64,
+    killer_table: Vec<Move>,
 }
 #[derive(Clone, Copy)]
 struct TTEntry {
@@ -39,6 +40,7 @@ impl AlphaBetaSearcher {
                 best_move: Move::from_str("a1a1").unwrap(),
                 node_type: NodeType::Exact,
             }; TT_SIZE],
+            killer_table: vec![Move::from_str("a1a1").unwrap(); 128],
             nodes: 0,
         }
     }
@@ -129,7 +131,7 @@ impl AlphaBetaSearcher {
         }
     }
 
-    fn score_moves(&self, _board: &Board, moves: &Vec<Move>, tt_move: Move) -> Vec<i32> {
+    fn score_moves(&self, _board: &Board, moves: &Vec<Move>, tt_move: Move, ply: u32) -> Vec<i32> {
         //take in a board and a list of moves and return a list of scores for each move
         let mut scores: Vec<i32> = Vec::new();
         scores.reserve(moves.len());
@@ -137,6 +139,9 @@ impl AlphaBetaSearcher {
             let mut score: i32 = 0;
             if *m == tt_move {
                 score += 1000;
+            }
+            if *m == self.killer_table[ply as usize] {
+                score += 100; //TODO: revisit this constant
             }
             // Most valuable victim - least valuable attacker
             if self.move_is_capture(_board, m) {
@@ -179,7 +184,7 @@ impl AlphaBetaSearcher {
         }
     }
 
-    fn quiesce(&mut self, board: &Board, alpha: i32, beta: i32) -> i32 {
+    fn quiesce(&mut self, board: &Board, alpha: i32, beta: i32, ply: u32) -> i32 {
         //quiesce the position
         self.nodes += 1;
         let stand_pat: i32 = self.evaluate(board);
@@ -199,13 +204,13 @@ impl AlphaBetaSearcher {
             false
         });
         //sort moves
-        let mut scores: Vec<i32> = self.score_moves(board, &moves, Move::from_str("a1a1").unwrap());
+        let mut scores: Vec<i32> = self.score_moves(board, &moves, Move::from_str("a1a1").unwrap(), ply);
         self.sort_moves(&mut moves, &mut scores);
         let mut best_score: i32 = -self.min_val;
         for m in moves {
             let mut new_board: Board = board.clone();
             new_board.play(m);
-            let score: i32 = -self.quiesce(&new_board, -beta, -local_alpha);
+            let score: i32 = -self.quiesce(&new_board, -beta, -local_alpha, ply + 1);
             if score >= beta {
                 return beta;
             }
@@ -227,7 +232,7 @@ impl AlphaBetaSearcher {
             };
         }
         if depth == 0 {
-            return self.quiesce(board, alpha, beta);
+            return self.quiesce(board, alpha, beta, ply);
         }
         if start_time.elapsed() > time_limit {
             return self.min_val;
@@ -259,7 +264,7 @@ impl AlphaBetaSearcher {
             }
             false
         });
-        let mut scores: Vec<i32> = self.score_moves(board, &moves, tt_move);
+        let mut scores: Vec<i32> = self.score_moves(board, &moves, tt_move, ply);
         //use insertion sort to sort moves and scores
         self.sort_moves(&mut moves, &mut scores);
         //search through all moves
@@ -276,6 +281,7 @@ impl AlphaBetaSearcher {
             }
             new_alpha = new_alpha.max(score);
             if new_alpha >= new_beta {
+                self.killer_table[ply as usize] = m;
                 break;
             }
         }
@@ -306,7 +312,7 @@ impl AlphaBetaSearcher {
         let mut final_move: String = String::new();
         self.nodes = 0;
         self.root_best_move = Move::from_str("a1a1").unwrap();
-        while start_time.elapsed() < time_limit {
+        while start_time.elapsed() < time_limit && current_depth < 100 {
             let score: i32 = self.negamax(board, current_depth, self.min_val, -self.min_val, 0, start_time, time_limit);
             if score.abs() != self.min_val.abs() {
                 // println!("info depth {} score {}", current_depth, score);
