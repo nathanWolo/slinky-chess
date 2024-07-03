@@ -222,7 +222,7 @@ impl AlphaBetaSearcher {
         local_alpha
     }
 
-    fn negamax(&mut self, board: &Board, depth: i32, alpha: i32, beta: i32, ply:u32, start_time: Instant, time_limit: Duration) -> i32 {
+    fn pvs(&mut self, board: &Board, depth: i32, alpha: i32, beta: i32, ply:u32, start_time: Instant, time_limit: Duration) -> i32 {
         self.nodes += 1;
         if board.status() != GameStatus::Ongoing {
             match board.status() {
@@ -237,14 +237,14 @@ impl AlphaBetaSearcher {
         if start_time.elapsed() > time_limit {
             return self.min_val;
         }
-
+        let pv_node: bool = beta - alpha > 1;
         // probe TT
         let mut best_score: i32 = self.min_val;
         let mut new_alpha: i32 = alpha;
         let mut new_beta: i32 = beta;
         let entry: TTEntry = self.transposition_table[board.hash() as usize % TT_SIZE];
         let tt_move: Move = entry.best_move;
-        if entry.hash == board.hash() && entry.depth >= depth && ply != 0{
+        if entry.hash == board.hash() && entry.depth >= depth && ply != 0 && !pv_node {
             match entry.node_type {
                 NodeType::Exact => return entry.score,
                 NodeType::LowerBound => new_alpha = alpha.max(entry.score),
@@ -267,21 +267,30 @@ impl AlphaBetaSearcher {
         let mut scores: Vec<i32> = self.score_moves(board, &moves, tt_move, ply);
         //use insertion sort to sort moves and scores
         self.sort_moves(&mut moves, &mut scores);
+        let mut score: i32;
         //search through all moves
-        for m in moves {
+        for (i, m) in moves.iter().enumerate() {
             let mut new_board: Board = board.clone();
-            new_board.play(m);
-            let score: i32 = -self.negamax(&new_board, depth - 1, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
+            new_board.play(*m);
+            if i == 0 { //principal variation
+                score = -self.pvs(&new_board, depth - 1, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
+            }
+            else {
+                score = -self.pvs(&new_board, depth - 1, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit);
+                if new_alpha < score && score < new_beta {
+                    score = -self.pvs(&new_board, depth - 1, -new_beta, -score, ply + 1, start_time, time_limit);
+                }
+            }
             if score > best_score {
                 best_score = score;
                 if (ply == 0) && (score.abs() != self.min_val.abs()) {
-                    self.root_best_move = m;
+                    self.root_best_move = *m;
                     self.root_score = score;
                 }
             }
             new_alpha = new_alpha.max(score);
             if new_alpha >= new_beta {
-                self.killer_table[ply as usize] = m;
+                self.killer_table[ply as usize] = *m;
                 break;
             }
         }
@@ -313,7 +322,7 @@ impl AlphaBetaSearcher {
         self.nodes = 0;
         self.root_best_move = Move::from_str("a1a1").unwrap();
         while start_time.elapsed() < time_limit && current_depth < 100 {
-            let score: i32 = self.negamax(board, current_depth, self.min_val, -self.min_val, 0, start_time, time_limit);
+            let score: i32 = self.pvs(board, current_depth, self.min_val, -self.min_val, 0, start_time, time_limit);
             if score.abs() != self.min_val.abs() {
                 // println!("info depth {} score {}", current_depth, score);
                 final_move = self.root_best_move.clone().to_string();
