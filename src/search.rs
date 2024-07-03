@@ -318,18 +318,19 @@ impl AlphaBetaSearcher {
                 // println!("info depth {} score {}", current_depth, score);
                 final_move = self.root_best_move.clone().to_string();
             }
+            println!("depth {} score cp {} NPS {}k", current_depth, score, (self.nodes as f32) / (start_time.elapsed().as_secs_f32() *1000.0));
             current_depth += 1;
         }
 
         //check if final_move is legal
-        let mut legal_moves: Vec<Move> = Vec::new();
-        legal_moves.reserve(32);
-        board.generate_moves(|p: PieceMoves| {
-            for m in p {
-                legal_moves.push(m);
-            }
-            false
-        });
+        // let mut legal_moves: Vec<Move> = Vec::new();
+        // legal_moves.reserve(32);
+        // board.generate_moves(|p: PieceMoves| {
+        //     for m in p {
+        //         legal_moves.push(m);
+        //     }
+        //     false
+        // });
         println!("info depth {} score cp {} NPS {}k", current_depth - 1, self.root_score, (self.nodes as f32) / (start_time.elapsed().as_secs_f32() *1000.0));
         return final_move;
     }

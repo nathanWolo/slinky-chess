@@ -67,9 +67,10 @@ fn main() {
         } else if input.starts_with("go") {
             let words: Vec<&str> = input.split_whitespace().collect();
             let mut i = 0;
+            let mut thinking_time: u64 = 0;
             while i < words.len() {
                 match words[i] {
-                    "wtime" | "btime" | "winc" | "binc" => {
+                    "wtime" | "btime" | "winc" | "binc" | "movetime" => {
                         if i + 1 < words.len() {
                             if let Ok(value) = words[i + 1].parse::<u64>() {
                                 match words[i] {
@@ -77,6 +78,7 @@ fn main() {
                                     "btime" => btime = value,
                                     "winc" => winc = value,
                                     "binc" => binc = value,
+                                    "movetime" => thinking_time = value,
                                     _ => unreachable!(),
                                 }
                             } else {
@@ -101,12 +103,13 @@ fn main() {
                     _ => i += 1,
                 }
             }
-
-            let thinking_time: u64 = if board.side_to_move() == Color::White {
-                wtime / 30 + winc / 10
-            } else {
-                btime / 30 + binc / 10
-            };
+            if thinking_time == 0 {
+                thinking_time = if board.side_to_move() == Color::White {
+                    wtime / 30 + winc / 10
+                } else {
+                    btime / 30 + binc / 10
+                };
+            }
 
             let best_move: String = searcher.get_best_move(&board, thinking_time);
             println!("bestmove {}", best_move);
