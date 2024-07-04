@@ -11,6 +11,7 @@ pub struct AlphaBetaSearcher {
     min_val: i32,
     nodes: u64,
     killer_table: Vec<Move>,
+    history_table: Vec<Vec<Vec<i32>>>,
 }
 #[derive(Clone, Copy)]
 struct TTEntry {
@@ -41,6 +42,7 @@ impl AlphaBetaSearcher {
                 node_type: NodeType::Exact,
             }; TT_SIZE],
             killer_table: vec![Move::from_str("a1a1").unwrap(); 128],
+            history_table: vec![vec![vec![0; 64]; 64]; 2],
             nodes: 0,
         }
     }
@@ -135,13 +137,14 @@ impl AlphaBetaSearcher {
         //take in a board and a list of moves and return a list of scores for each move
         let mut scores: Vec<i32> = Vec::new();
         scores.reserve(moves.len());
+        let tt_bonus: i32 = 1 << 24;
+        let capture_bonus: i32 = 1 << 20;
+        let killer_bonus: i32 = 1 << 20;
+        // let history_max: i32 = 1 << 18;
         for m in moves {
             let mut score: i32 = 0;
             if *m == tt_move {
-                score += 1000;
-            }
-            if *m == self.killer_table[ply as usize] {
-                score += 100; //TODO: revisit this constant
+                score += tt_bonus;
             }
             // Most valuable victim - least valuable attacker
             if self.move_is_capture(_board, m) {
@@ -163,9 +166,14 @@ impl AlphaBetaSearcher {
                     Piece::Queen => 9,
                     _ => 0,
                 };
-                score += target_value - attacker_value + 100;
+                score += target_value - attacker_value + capture_bonus;
             }
-
+            else if *m == self.killer_table[ply as usize] {
+                score += killer_bonus; //TODO: revisit this constant
+            }
+            else {
+                score += self.history_table[_board.side_to_move() as usize][m.from as usize][m.to as usize];
+            }
             scores.push(score);
         }
         scores
@@ -269,8 +277,9 @@ impl AlphaBetaSearcher {
         self.sort_moves(&mut moves, &mut scores);
         let mut score: i32;
         //search through all moves
+        let mut new_board = board.clone();
         for (i, m) in moves.iter().enumerate() {
-            let mut new_board: Board = board.clone();
+            // let mut new_board: Board = board.clone();
             new_board.play(*m);
             if i == 0 { //principal variation
                 score = -self.pvs(&new_board, depth - 1, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
@@ -281,6 +290,7 @@ impl AlphaBetaSearcher {
                     score = -self.pvs(&new_board, depth - 1, -new_beta, -score, ply + 1, start_time, time_limit);
                 }
             }
+            new_board = board.clone();
             if score > best_score {
                 best_score = score;
                 if (ply == 0) && (score.abs() != self.min_val.abs()) {
@@ -291,6 +301,7 @@ impl AlphaBetaSearcher {
             new_alpha = new_alpha.max(score);
             if new_alpha >= new_beta {
                 self.killer_table[ply as usize] = *m;
+                self.history_table[board.side_to_move() as usize][m.from as usize][m.to as usize] += depth * depth;
                 break;
             }
         }
@@ -321,6 +332,8 @@ impl AlphaBetaSearcher {
         let mut final_move: String = String::new();
         self.nodes = 0;
         self.root_best_move = Move::from_str("a1a1").unwrap();
+        //clear history table
+        self.history_table = vec![vec![vec![0; 64]; 64]; 2];
         while start_time.elapsed() < time_limit && current_depth < 100 {
             let score: i32 = self.pvs(board, current_depth, self.min_val, -self.min_val, 0, start_time, time_limit);
             if score.abs() != self.min_val.abs() {
