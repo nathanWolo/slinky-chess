@@ -12,7 +12,8 @@ fn main() {
     let mut binc: u64 = 0;
     let mut winc: u64 = 0;
     // let mut movestogo: u64 = 0;
-
+    // println!("The square B1 is {} when cast to usize", Square::B1 as usize);
+    // println!("evaluation of startpos: {}", searcher.pesto_evaluate(&board));
     loop {
         input.clear();
         std::io::stdin().read_line(&mut input).unwrap();
