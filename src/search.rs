@@ -450,7 +450,14 @@ impl AlphaBetaSearcher {
                 _ => (),
             };
         }
-        if depth == 0 {
+
+        //check extension: if in check, increase depth by 1
+        let mut depth_modifier: i32 = 0;
+        if board.checkers().len() > 0  && ply != 0 && ply < 30{
+            depth_modifier += 1;
+        }
+
+        if depth == 0  && depth_modifier == 0{
             return self.quiesce(board, alpha, beta, ply);
         }
         if start_time.elapsed() > time_limit {
@@ -493,12 +500,12 @@ impl AlphaBetaSearcher {
             // let mut new_board: Board = board.clone();
             new_board.play(*m);
             if i == 0 { //principal variation
-                score = -self.pvs(&new_board, depth - 1, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
+                score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
             }
             else {
-                score = -self.pvs(&new_board, depth - 1, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit);
+                score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit);
                 if new_alpha < score && score < new_beta {
-                    score = -self.pvs(&new_board, depth - 1, -new_beta, -score, ply + 1, start_time, time_limit);
+                    score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -score, ply + 1, start_time, time_limit);
                 }
             }
             new_board = board.clone();
@@ -525,10 +532,10 @@ impl AlphaBetaSearcher {
         };
         let tt_entry: TTEntry = TTEntry {
             hash: board.hash(),
-            depth: depth,
+            depth,
             score: best_score,
             best_move: self.root_best_move,
-            node_type: node_type,
+            node_type,
         };
         self.transposition_table[board.hash() as usize % TT_SIZE] = tt_entry;
         
