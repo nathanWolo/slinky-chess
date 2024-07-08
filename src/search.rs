@@ -403,12 +403,15 @@ impl AlphaBetaSearcher {
         }
     }
 
-    fn quiesce(&mut self, board: &Board, alpha: i32, beta: i32, ply: u32) -> i32 {
+    fn quiesce(&mut self, board: &Board, alpha: i32, beta: i32, ply: u32, start_time: Instant, time_limit: Duration) -> i32 {
         //quiesce the position
         self.nodes += 1;
         let stand_pat: i32 = self.pesto_evaluate(board);
         if stand_pat >= beta {
             return beta;
+        }
+        if start_time.elapsed() > time_limit {
+            return self.min_val;
         }
 
         let mut local_alpha: i32 = alpha.max(stand_pat);
@@ -429,7 +432,7 @@ impl AlphaBetaSearcher {
         for m in moves {
             let mut new_board: Board = board.clone();
             new_board.play(m);
-            let score: i32 = -self.quiesce(&new_board, -beta, -local_alpha, ply + 1);
+            let score: i32 = -self.quiesce(&new_board, -beta, -local_alpha, ply + 1, start_time, time_limit);
             if score >= beta {
                 return beta;
             }
@@ -441,7 +444,7 @@ impl AlphaBetaSearcher {
         local_alpha
     }
 
-    fn pvs(&mut self, board: &Board, depth: i32, alpha: i32, beta: i32, ply:u32, start_time: Instant, time_limit: Duration) -> i32 {
+    fn pvs(&mut self, board: &Board, depth: i32, alpha: i32, beta: i32, ply:u32, start_time: Instant, time_limit: Duration, mut extend_checks: bool) -> i32 {
         self.nodes += 1;
         if board.status() != GameStatus::Ongoing {
             match board.status() {
@@ -453,12 +456,13 @@ impl AlphaBetaSearcher {
 
         //check extension: if in check, increase depth by 1
         let mut depth_modifier: i32 = 0;
-        if board.checkers().len() > 0  && ply != 0 && ply < 30{
+        if board.checkers().len() > 0  && ply != 0 && extend_checks{
             depth_modifier += 1;
+            extend_checks = false;
         }
 
         if depth == 0  && depth_modifier == 0{
-            return self.quiesce(board, alpha, beta, ply);
+            return self.quiesce(board, alpha, beta, ply, start_time, time_limit);
         }
         if start_time.elapsed() > time_limit {
             return self.min_val;
@@ -475,7 +479,6 @@ impl AlphaBetaSearcher {
                 NodeType::Exact => return entry.score,
                 NodeType::LowerBound => new_alpha = alpha.max(entry.score),
                 NodeType::UpperBound => new_beta = beta.min(entry.score),
-                // _ => (),
             }
             if new_alpha >= new_beta {
                 return entry.score;
@@ -491,21 +494,20 @@ impl AlphaBetaSearcher {
             false
         });
         let mut scores: Vec<i32> = self.score_moves(board, &moves, tt_move, ply);
-        //use insertion sort to sort moves and scores
         self.sort_moves(&mut moves, &mut scores);
         let mut score: i32;
-        //search through all moves
+
         let mut new_board = board.clone();
         for (i, m) in moves.iter().enumerate() {
             // let mut new_board: Board = board.clone();
             new_board.play(*m);
             if i == 0 { //principal variation
-                score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -new_alpha, ply + 1, start_time, time_limit);
+                score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -new_alpha, ply + 1, start_time, time_limit, extend_checks);
             }
             else {
-                score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit);
+                score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, extend_checks);
                 if new_alpha < score && score < new_beta {
-                    score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -score, ply + 1, start_time, time_limit);
+                    score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -score, ply + 1, start_time, time_limit, extend_checks);
                 }
             }
             new_board = board.clone();
@@ -530,6 +532,7 @@ impl AlphaBetaSearcher {
         } else {
             NodeType::Exact
         };
+        //idea for later: dont store in TT if score is timeout
         let tt_entry: TTEntry = TTEntry {
             hash: board.hash(),
             depth,
@@ -553,24 +556,27 @@ impl AlphaBetaSearcher {
         //clear history table
         self.history_table = vec![vec![vec![0; 64]; 64]; 2];
         while start_time.elapsed() < time_limit && current_depth < 100 {
-            let score: i32 = self.pvs(board, current_depth, -99999999, 999999, 0, start_time, time_limit);
-            if score.abs() != self.min_val.abs() {
+            let score: i32 = self.pvs(board, current_depth, -99999999, 999999, 0, start_time, time_limit, true);
+            // if score.abs() != self.min_val.abs() {
                 // println!("info depth {} score {}", current_depth, score);
                 final_move = self.root_best_move.clone().to_string();
-            }
+            // }
             println!("depth {} score cp {} NPS {}k", current_depth, score, (self.nodes as f32) / (start_time.elapsed().as_secs_f32() *1000.0));
             current_depth += 1;
         }
 
         //check if final_move is legal
-        // let mut legal_moves: Vec<Move> = Vec::new();
-        // legal_moves.reserve(32);
-        // board.generate_moves(|p: PieceMoves| {
-        //     for m in p {
-        //         legal_moves.push(m);
-        //     }
-        //     false
-        // });
+        let mut legal_moves: Vec<String> = Vec::new();
+        board.generate_moves(|p: PieceMoves| {
+            for m in p {
+                legal_moves.push(m.to_string());
+            }
+            false
+        });
+        //if move is not legal, print move and fen to stderr and panic
+        if !legal_moves.contains(&final_move) {
+            panic!("Illegal move {} in position {}. Searched to depth {} with root_best_move {}", final_move, board, current_depth - 1, self.root_best_move);
+        }
         println!("info depth {} score cp {} NPS {}k", current_depth - 1, self.root_score, (self.nodes as f32) / (start_time.elapsed().as_secs_f32() *1000.0));
         return final_move;
     }
