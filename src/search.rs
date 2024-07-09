@@ -552,21 +552,30 @@ impl AlphaBetaSearcher {
         let time_limit: Duration = Duration::from_millis(thinking_time);
         //do iterative deepening until we run out of time
         let mut current_depth: i32 = 1;
-        let mut final_move: String = String::new();
+        let final_move: String;
         self.nodes = 0;
         self.root_best_move = Move::from_str("a1a1").unwrap();
         //clear history table
         self.history_table = vec![vec![vec![0; 64]; 64]; 2];
+
+        let aspiration_window: i32 = 30;
+        let mut alpha: i32 = -99999999;
+        let mut beta: i32 = 99999999;
+
         while start_time.elapsed() < time_limit && current_depth < 100 {
-            let score: i32 = self.pvs(board, current_depth, -99999999, 999999, 0, start_time, time_limit, true);
-            // if score.abs() != self.min_val.abs() {
-                // println!("info depth {} score {}", current_depth, score);
-                final_move = self.root_best_move.clone().to_string();
-            // }
+            let score: i32 = self.pvs(board, current_depth, alpha, beta, 0, start_time, time_limit, true);
+            if score <= alpha || score >= beta {
+                //fail high or low, re-search with full window
+                alpha = -99999999;
+                beta = 99999999;
+                continue;
+            }
+            alpha = score - aspiration_window;
+            beta = score + aspiration_window;
             println!("depth {} score cp {} NPS {}k", current_depth, score, (self.nodes as f32) / (start_time.elapsed().as_secs_f32() *1000.0));
             current_depth += 1;
         }
-
+        final_move = self.root_best_move.clone().to_string();
         //check if final_move is legal
         let mut legal_moves: Vec<String> = Vec::new();
         board.generate_moves(|p: PieceMoves| {
