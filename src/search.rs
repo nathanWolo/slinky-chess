@@ -558,18 +558,20 @@ impl AlphaBetaSearcher {
         //clear history table
         self.history_table = vec![vec![vec![0; 64]; 64]; 2];
 
-        let aspiration_window: i32 = 30;
+        let mut aspiration_window: i32 = 15;
         let mut alpha: i32 = -99999999;
         let mut beta: i32 = 99999999;
 
         while start_time.elapsed() < time_limit && current_depth < 100 {
             let score: i32 = self.pvs(board, current_depth, alpha, beta, 0, start_time, time_limit, true);
             if score <= alpha || score >= beta {
-                //fail high or low, re-search with full window
-                alpha = -99999999;
-                beta = 99999999;
+                //fail high or low, re-search with gradual widening
+                aspiration_window *= 2;
+                alpha = score - aspiration_window;
+                beta = score + aspiration_window;
                 continue;
             }
+            aspiration_window = 15;
             alpha = score - aspiration_window;
             beta = score + aspiration_window;
             println!("depth {} score cp {} NPS {}k", current_depth, score, (self.nodes as f32) / (start_time.elapsed().as_secs_f32() *1000.0));
