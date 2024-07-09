@@ -533,14 +533,16 @@ impl AlphaBetaSearcher {
             NodeType::Exact
         };
         //idea for later: dont store in TT if score is timeout
-        let tt_entry: TTEntry = TTEntry {
-            hash: board.hash(),
-            depth,
-            score: best_score,
-            best_move: self.root_best_move,
-            node_type,
-        };
-        self.transposition_table[board.hash() as usize % TT_SIZE] = tt_entry;
+        if best_score.abs() != self.min_val.abs() {
+            let tt_entry: TTEntry = TTEntry {
+                hash: board.hash(),
+                depth,
+                score: best_score,
+                best_move: self.root_best_move,
+                node_type,
+            };
+            self.transposition_table[board.hash() as usize % TT_SIZE] = tt_entry;
+        }
         
         best_score
     }
