@@ -12,6 +12,7 @@ pub struct AlphaBetaSearcher {
     nodes: u64,
     killer_table: Vec<Move>,
     history_table: Vec<Vec<Vec<i32>>>,
+    threefold_repetition: Vec<u64>, //keep a running stack of boards seen in the DFS
 }
 #[derive(Clone, Copy)]
 struct TTEntry {
@@ -172,6 +173,7 @@ impl AlphaBetaSearcher {
             }; TT_SIZE],
             killer_table: vec![Move::from_str("a1a1").unwrap(); 128],
             history_table: vec![vec![vec![0; 64]; 64]; 2],
+            threefold_repetition: Vec::new(),
             nodes: 0,
         }
     }
@@ -453,6 +455,17 @@ impl AlphaBetaSearcher {
                 _ => (),
             };
         }
+        //check if there is a triplet in the threefold repetition stack
+        let mut threefold_count: i32 = 0;
+        for hash in self.threefold_repetition.iter() {
+            if *hash == board.hash() {
+                threefold_count += 1;
+            }
+        }
+        if threefold_count >= 3 {
+            return 0;
+        }
+
 
         //check extension: if in check, increase depth by 1
         let mut depth_modifier: i32 = 0;
@@ -501,6 +514,7 @@ impl AlphaBetaSearcher {
         for (i, m) in moves.iter().enumerate() {
             // let mut new_board: Board = board.clone();
             new_board.play(*m);
+            self.threefold_repetition.push(new_board.hash());
             if i == 0 { //principal variation
                 score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -new_alpha, ply + 1, start_time, time_limit, extend_checks);
             }
@@ -510,6 +524,7 @@ impl AlphaBetaSearcher {
                     score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -score, ply + 1, start_time, time_limit, extend_checks);
                 }
             }
+            self.threefold_repetition.pop();
             new_board = board.clone();
             if score > best_score {
                 best_score = score;
