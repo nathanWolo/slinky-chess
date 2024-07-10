@@ -527,7 +527,6 @@ impl AlphaBetaSearcher {
 
         let mut new_board = board.clone();
         for (i, m) in moves.iter().enumerate() {
-            // let mut new_board: Board = board.clone();
             new_board.play(*m);
             self.threefold_repetition.push(new_board.hash());
             if i == 0 { //principal variation
