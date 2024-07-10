@@ -351,9 +351,6 @@ impl AlphaBetaSearcher {
         //take in a board and a list of moves and return a list of scores for each move
         let mut scores: Vec<i32> = Vec::new();
         scores.reserve(moves.len());
-        // let tt_bonus: i32 = 1 << 24;
-        // let capture_bonus: i32 = 1 << 20;
-        // let killer_bonus: i32 = 1 << 20;
         for m in moves {
             let mut score: i32 = 0;
             if *m == tt_move {
@@ -469,7 +466,8 @@ impl AlphaBetaSearcher {
 
         //check extension: if in check, increase depth by 1
         let mut depth_modifier: i32 = 0;
-        if board.checkers().len() > 0  && ply != 0 && extend_checks{
+        let in_check: bool = board.checkers().len() > 0;
+        if in_check  && ply != 0 && extend_checks{
             depth_modifier += 1;
             extend_checks = false;
         }
@@ -497,6 +495,16 @@ impl AlphaBetaSearcher {
                 return entry.score;
             }
         }
+
+        //reverse futility pruning
+        if !pv_node && !in_check{
+            let stand_pat: i32 = self.pesto_evaluate(board);
+            if stand_pat - 90 * depth > beta && depth < 8{
+                return stand_pat;
+            }
+
+        }
+
         //generate all moves and store them in a vector
         let mut moves: Vec<Move> = Vec::new();
         moves.reserve(32);
