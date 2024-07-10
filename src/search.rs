@@ -443,7 +443,7 @@ impl AlphaBetaSearcher {
         local_alpha
     }
 
-    fn pvs(&mut self, board: &Board, depth: i32, alpha: i32, beta: i32, ply:u32, start_time: Instant, time_limit: Duration, mut extend_checks: bool) -> i32 {
+    fn pvs(&mut self, board: &Board, depth: i32, alpha: i32, beta: i32, ply:u32, start_time: Instant, time_limit: Duration, mut extend_checks: bool, can_null: bool) -> i32 {
         self.nodes += 1;
         if board.status() != GameStatus::Ongoing {
             match board.status() {
@@ -497,12 +497,19 @@ impl AlphaBetaSearcher {
         }
 
         //reverse futility pruning
-        if !pv_node && !in_check{
+        if !pv_node && !in_check && ply != 0{
             let stand_pat: i32 = self.pesto_evaluate(board);
             if stand_pat - 90 * depth > beta && depth < 8{
                 return stand_pat;
             }
-
+            //null move pruning
+            if stand_pat >= beta && depth > 3 && !in_check && can_null{
+                let nulled_board: Board = board.clone().null_move().unwrap();
+                let score: i32 = -self.pvs(&nulled_board, depth - 3, -new_beta, -new_beta + 1, ply + 1, start_time, time_limit, extend_checks, false);
+                if score >= beta {
+                    return beta;
+                }
+            }
         }
 
         //generate all moves and store them in a vector
@@ -524,12 +531,12 @@ impl AlphaBetaSearcher {
             new_board.play(*m);
             self.threefold_repetition.push(new_board.hash());
             if i == 0 { //principal variation
-                score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -new_alpha, ply + 1, start_time, time_limit, extend_checks);
+                score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -new_alpha, ply + 1, start_time, time_limit, extend_checks, can_null);
             }
             else {
-                score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, extend_checks);
+                score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, extend_checks, can_null);
                 if new_alpha < score && score < new_beta {
-                    score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -score, ply + 1, start_time, time_limit, extend_checks);
+                    score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -score, ply + 1, start_time, time_limit, extend_checks, can_null);
                 }
             }
             self.threefold_repetition.pop();
@@ -586,7 +593,7 @@ impl AlphaBetaSearcher {
         let mut beta: i32 = 99999999;
 
         while start_time.elapsed() < time_limit && current_depth < 100 {
-            let score: i32 = self.pvs(board, current_depth, alpha, beta, 0, start_time, time_limit, true);
+            let score: i32 = self.pvs(board, current_depth, alpha, beta, 0, start_time, time_limit, true, true);
             if score <= alpha || score >= beta {
                 //fail high or low, re-search with gradual widening
                 aspiration_window *= 2;
