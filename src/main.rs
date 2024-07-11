@@ -16,6 +16,7 @@ fn main() {
     // println!("evaluation of startpos: {}", searcher.pesto_evaluate(&board));
     loop {
         input.clear();
+        searcher.clear_threefold_repetition();
         std::io::stdin().read_line(&mut input).unwrap();
         let input = input.trim();
 
@@ -57,7 +58,11 @@ fn main() {
             if let Some(moves_index) = parts.iter().position(|&x| x == "moves") {
                 for m in parts.iter().skip(moves_index + 1) {
                     match util::parse_uci_move(&board, m) {
-                        Ok(ucimove) => board.play(ucimove),
+                        Ok(ucimove) => {
+                            board.play(ucimove);
+                            searcher.add_to_threefold_repetition(board.hash());
+                            
+                        },
                         Err(e) => {
                             eprintln!("Failed to parse move: {}. Error: {:?}", m, e);
                             break;

@@ -255,7 +255,12 @@ impl AlphaBetaSearcher {
     //     }
     //     score
     // }
-
+    pub fn add_to_threefold_repetition(&mut self, hash: u64) {
+        self.threefold_repetition.push(hash);
+    }
+    pub fn clear_threefold_repetition(&mut self) {
+        self.threefold_repetition = Vec::new();
+    }
     pub fn pesto_evaluate(&self, board: &Board) -> i32 {
         let mut white_mg:i32 = 0;
         let mut black_mg:i32 = 0;
@@ -459,7 +464,7 @@ impl AlphaBetaSearcher {
                 threefold_count += 1;
             }
         }
-        if threefold_count >= 3 {
+        if threefold_count >= 2 {
             return 0;
         }
 
