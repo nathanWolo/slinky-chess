@@ -270,9 +270,60 @@ impl AlphaBetaSearcher {
         let mut mg_phase: i32 = 0;
         let mut score: i32;
         for piece in piece_types.iter() {
-            let white: BitBoardIter = board.colored_pieces(Color::White, *piece).iter();
-            let black: BitBoardIter = board.colored_pieces(Color::Black, *piece).iter();
-            for square in white {
+            let white: BitBoard = board.colored_pieces(Color::White, *piece);
+            let black: BitBoard = board.colored_pieces(Color::Black, *piece);
+
+            //bishop pair bonus
+            if *piece == Piece::Bishop {
+                if white.len() >= 2 {
+                    white_mg += 15;
+                    white_eg += 30;
+                }
+                if black.len() >= 2 {
+                    black_mg += 15;
+                    black_eg += 30;
+                }
+            }
+            //rook on open file bonus
+            if *piece == Piece::Rook {
+
+                for rook in white.iter() {
+                    let file: BitBoard = rook.file().bitboard();
+                    //check that there are no enemy pawns on the file
+                    let enemy_pawns: BitBoard = board.colored_pieces(Color::Black, Piece::Pawn);
+                    let friendly_pawns: BitBoard = board.colored_pieces(Color::White, Piece::Pawn);
+                    //open file
+                    if (file & friendly_pawns & enemy_pawns).is_empty() {
+                        white_mg += 20;
+                        white_eg += 10;
+                    }
+                    //semi open file
+                    else if (file & friendly_pawns).is_empty() {
+                        white_mg += 10;
+                        white_eg += 5;
+                    }
+                }
+                for rook in black.iter() {
+                    let file: BitBoard = rook.file().bitboard();
+                    //check that there are no enemy pawns on the file
+                    let enemy_pawns: BitBoard = board.colored_pieces(Color::White, Piece::Pawn);
+                    let friendly_pawns: BitBoard = board.colored_pieces(Color::Black, Piece::Pawn);
+                    //open file
+                    if (file & friendly_pawns & enemy_pawns).is_empty() {
+                        black_mg += 20;
+                        black_eg += 10;
+                    }
+                    //semi open file
+                    else if (file & friendly_pawns).is_empty() {
+                        black_mg += 10;
+                        black_eg += 5;
+                    }
+                }
+
+            }
+
+
+            for square in white.iter() {
                 let rel_square: usize = square.relative_to(Color::Black) as usize; //this flips the perspective because the PSTs are stored in A8, B8, C8 ... order
                 match piece {
                     Piece::Pawn => white_mg += MG_PAWN_TABLE[rel_square] + MG_PAWN_MATERIAL,
@@ -300,7 +351,7 @@ impl AlphaBetaSearcher {
                     _ => (),
                 }
             }
-            for square in black {
+            for square in black.iter() {
                 let rel_square: usize = square as usize;
                 match piece {
                     Piece::Pawn => black_mg += MG_PAWN_TABLE[rel_square] + MG_PAWN_MATERIAL,
@@ -389,6 +440,10 @@ impl AlphaBetaSearcher {
             else {
                 score += self.history_table[_board.side_to_move() as usize][m.from as usize][m.to as usize];
             }
+            //idea: malus for underpromotions
+            // if m.promotion.is_some() {
+            //     score -= 100;
+            // }
             scores.push(score);
         }
         scores
