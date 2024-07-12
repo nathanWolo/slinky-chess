@@ -441,9 +441,11 @@ impl AlphaBetaSearcher {
                 score += self.history_table[_board.side_to_move() as usize][m.from as usize][m.to as usize];
             }
             //idea: malus for underpromotions
-            // if m.promotion.is_some() {
-            //     score -= 100;
-            // }
+            if m.promotion.is_some() {
+                if m.promotion.unwrap() != Piece::Queen {
+                    score -= CAPTURE_BONUS * 2;
+                }
+            }
             scores.push(score);
         }
         scores
@@ -611,8 +613,20 @@ impl AlphaBetaSearcher {
             if new_alpha >= new_beta {
                 self.killer_table[ply as usize] = *m;
                 self.history_table[board.side_to_move() as usize][m.from as usize][m.to as usize] += depth * depth;
+                //history gravity
+                //decrease history for all prior moves that didnt cause the cutoff
+                //if the beta cutoff move was not a capture
+                if !self.move_is_capture(board, m) {
+                    for j in 0..i {
+                        self.history_table[board.side_to_move() as usize][moves[j].from as usize][moves[j].to as usize] -= 1;
+                    }
+                }
                 break;
             }
+            // else {
+            //     //history gravity, decrease all history values of moves that dont cause a beta cutoff
+            //     self.history_table[board.side_to_move() as usize][m.from as usize][m.to as usize] -= 1;
+            // }
         }
         let node_type: NodeType = if best_score <= alpha {
             NodeType::UpperBound
@@ -646,6 +660,7 @@ impl AlphaBetaSearcher {
         self.root_best_move = Move::from_str("a1a1").unwrap();
         //clear history table
         self.history_table = vec![vec![vec![0; 64]; 64]; 2];
+        // self.killer_table = vec![Move::from_str("a1a1").unwrap(); 128];
 
         let mut aspiration_window: i32 = 15;
         let mut alpha: i32 = -99999999;
