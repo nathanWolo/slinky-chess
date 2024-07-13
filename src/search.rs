@@ -656,9 +656,10 @@ impl AlphaBetaSearcher {
         best_score
     }
 
-    pub fn get_best_move(&mut self, board: &Board, thinking_time: u64) -> String {
+    pub fn get_best_move(&mut self, board: &Board, time_remaining: u64, increment: u64) -> String {
         let start_time: Instant = Instant::now();
-        let time_limit: Duration = Duration::from_millis(thinking_time);
+        let hard_limit: Duration = Duration::from_millis(time_remaining/20 + increment);
+        let soft_limit: Duration = Duration::from_millis(time_remaining/30 + increment/2);
         //do iterative deepening until we run out of time
         let mut current_depth: i32 = 1;
         let final_move: String;
@@ -672,8 +673,8 @@ impl AlphaBetaSearcher {
         let mut alpha: i32 = -99999999;
         let mut beta: i32 = 99999999;
 
-        while start_time.elapsed() < time_limit && current_depth < 100 {
-            let score: i32 = self.pvs(board, current_depth, alpha, beta, 0, start_time, time_limit, true, true);
+        while start_time.elapsed() < soft_limit && current_depth < 100 {
+            let score: i32 = self.pvs(board, current_depth, alpha, beta, 0, start_time, hard_limit, true, true);
             if score <= alpha || score >= beta {
                 //fail high or low, re-search with gradual widening
                 aspiration_window *= 2;

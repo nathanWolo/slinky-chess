@@ -7,10 +7,10 @@ fn main() {
     let mut board = Board::default();
     let mut input = String::new();
     let mut searcher = AlphaBetaSearcher::new();
-    let mut btime: u64 = 0;
-    let mut wtime: u64 = 0;
-    let mut binc: u64 = 0;
-    let mut winc: u64 = 0;
+    // let mut btime: u64 = 0;
+    // let mut wtime: u64 = 0;
+    // let mut binc: u64 = 0;
+    // let mut winc: u64 = 0;
     // let mut movestogo: u64 = 0;
     // println!("The square B1 is {} when cast to usize", Square::B1 as usize);
     // println!("evaluation of startpos: {}", searcher.pesto_evaluate(&board));
@@ -72,8 +72,12 @@ fn main() {
             }
         } else if input.starts_with("go") {
             let words: Vec<&str> = input.split_whitespace().collect();
-            let mut i = 0;
-            let mut thinking_time: u64 = 0;
+            let mut i: usize = 0;
+            let mut wtime: u64 = 0;
+            let mut btime: u64 = 0;
+            let mut winc: u64 = 0;
+            let mut binc: u64 = 0;
+            let mut movetime: u64 = 0;
             while i < words.len() {
                 match words[i] {
                     "wtime" | "btime" | "winc" | "binc" | "movetime" => {
@@ -84,7 +88,7 @@ fn main() {
                                     "btime" => btime = value,
                                     "winc" => winc = value,
                                     "binc" => binc = value,
-                                    "movetime" => thinking_time = value,
+                                    "movetime" => movetime = value,
                                     _ => unreachable!(),
                                 }
                             } else {
@@ -109,15 +113,27 @@ fn main() {
                     _ => i += 1,
                 }
             }
-            if thinking_time == 0 {
-                thinking_time = if board.side_to_move() == Color::White {
-                    wtime / 30 + winc / 10
+            //if the input uses wtime/btime, use that, otherwise use movetime
+            let time_remaining = if board.side_to_move() == Color::White {
+                if wtime > 0 {
+                    wtime
                 } else {
-                    btime / 30 + binc / 10
-                };
-            }
+                    movetime
+                }
+            } else {
+                if btime > 0 {
+                    btime
+                } else {
+                    movetime
+                }
+            };
+            let increment: u64 = if board.side_to_move() == Color::White {
+                winc
+            } else {
+                binc
+            };
 
-            let best_move: String = searcher.get_best_move(&board, thinking_time);
+            let best_move: String = searcher.get_best_move(&board, time_remaining, increment);
             println!("bestmove {}", best_move);
         } else if input.starts_with("quit") {
             break;
