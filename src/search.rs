@@ -557,7 +557,7 @@ impl AlphaBetaSearcher {
                 return entry.score;
             }
         }
-
+        let mut can_fp: bool = false;
         //reverse futility pruning
         if !pv_node && !in_check && ply != 0{
             let stand_pat: i32 = self.pesto_evaluate(board);
@@ -572,6 +572,9 @@ impl AlphaBetaSearcher {
                     return beta;
                 }
             }
+
+            // futile pruning
+            can_fp = (stand_pat + 160 * depth) < alpha && depth < 5;
         }
 
         //generate all moves and store them in a vector
@@ -589,6 +592,9 @@ impl AlphaBetaSearcher {
 
         let mut new_board = board.clone();
         for (i, m) in moves.iter().enumerate() {
+            if can_fp && i > 4 && !self.move_is_capture(board, m) {
+                continue;
+            }
             new_board.play(*m);
             self.threefold_repetition.push(new_board.hash());
             if i == 0 { //principal variation
