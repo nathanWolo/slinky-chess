@@ -177,84 +177,6 @@ impl AlphaBetaSearcher {
             nodes: 0,
         }
     }
-
-    // fn count_material(&self, board: &Board, color: Color) -> i32 {
-    //     let mut material: i32 = 0;
-    //     let pieces: [Piece; 5] = [Piece::Pawn, Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen];
-    //     let values: [i32; 5] = [100, 300, 300, 500, 900];
-    //     for (i, piece) in pieces.iter().enumerate() {
-    //         let count: i32 = board.colored_pieces(color, *piece).len() as i32;
-    //         material += count * values[i];
-    //     }
-    //     material
-    // }
-    // fn check_two_bishops(&self, board: &Board, color: Color) -> bool {
-    //     let bishops = board.colored_pieces(color, Piece::Bishop);
-    //     return bishops.len() >= 2;
-    // }
-    // fn check_rooks_same_file(&self, board: &Board, color: Color) -> bool {
-    //     let rooks = board.colored_pieces(color, Piece::Rook);
-    //     if rooks.len() < 2 {
-    //         return false;
-    //     }
-    //     let files: Vec<File> = rooks.iter().map(|s| s.file()).collect();
-    //     for i in 0..files.len() {
-    //         for j in i + 1..files.len() {
-    //             if files[i] == files[j] {
-    //                 return true;
-    //             }
-    //         }
-    //     }
-    //     false
-    // }
-    // fn pawn_advancement_score(&self, board: &Board, color: Color) -> i32 {
-    //     let mut score: i32 = 0;
-    //     let pawns = board.colored_pieces(color, Piece::Pawn);
-    //     for p in pawns {
-    //         let rank: Rank = p.rank();
-    //         let rank_val: i32 = match rank {
-    //             Rank::First => 0,
-    //             Rank::Second => 1,
-    //             Rank::Third => 2,
-    //             Rank::Fourth => 3,
-    //             Rank::Fifth => 4,
-    //             Rank::Sixth => 5,
-    //             Rank::Seventh => 6,
-    //             Rank::Eighth => 7,
-    //         };
-    //         if color == Color::White {
-    //             score += rank_val;
-    //         } else {
-    //             score += 7 - rank_val;
-    //         }
-    //     }
-    //     score * 2
-    // }
-    // fn simple_evaluate(&self, board: &Board) -> i32 {
-    //     let mut white_score: i32 = 0;
-    //     let mut black_score: i32 = 0;
-    //     white_score += self.count_material(board, Color::White);
-    //     black_score += self.count_material(board, Color::Black);
-    //     if self.check_two_bishops(board, Color::White) {
-    //         white_score += 30;
-    //     }
-    //     if self.check_two_bishops(board, Color::Black) {
-    //         black_score += 30;
-    //     }
-    //     if self.check_rooks_same_file(board, Color::White) {
-    //         white_score += 20;
-    //     }
-    //     if self.check_rooks_same_file(board, Color::Black) {
-    //         black_score += 20;
-    //     }
-    //     white_score += self.pawn_advancement_score(board, Color::White);
-    //     black_score += self.pawn_advancement_score(board, Color::Black);
-    //     let mut score: i32 = white_score - black_score;
-    //     if board.side_to_move() == Color::Black {
-    //         score = -score;
-    //     }
-    //     score
-    // }
     pub fn add_to_threefold_repetition(&mut self, hash: u64) {
         self.threefold_repetition.push(hash);
     }
@@ -467,7 +389,26 @@ impl AlphaBetaSearcher {
             i += 1;
         }
     }
-
+    fn piece_value(&self, piece: Piece) -> i32 {
+        match piece {
+            Piece::Pawn => 100,
+            Piece::Knight => 320,
+            Piece::Bishop => 330,
+            Piece::Rook => 500,
+            Piece::Queen => 900,
+            Piece::King => 20000,
+        }
+    }
+    fn see_worst_case(&self, b: &Board, m: Move) -> i32 {
+        //assume piece will make move and immediately be lost for nothing
+        let cap_option: Option<Piece> = b.piece_on(m.to);
+        let cap_value: i32 = match cap_option {
+            Some(p) => self.piece_value(p),
+            None => 0,
+        };
+        let attacker_value: i32 = self.piece_value(b.piece_on(m.from).unwrap());
+        cap_value - attacker_value
+    }
     fn quiesce(&mut self, board: &Board, alpha: i32, beta: i32, ply: u32, start_time: Instant, time_limit: Duration) -> i32 {
         //quiesce the position
         self.nodes += 1;
@@ -496,6 +437,11 @@ impl AlphaBetaSearcher {
         let mut best_score: i32 = -self.min_val;
         for m in moves {
             let mut new_board: Board = board.clone();
+            let worst_case: i32 = self.see_worst_case(&new_board, m);
+            let at_least: i32 = stand_pat + worst_case;
+            if at_least > beta {
+                return beta;
+            }
             new_board.play(m);
             let score: i32 = -self.quiesce(&new_board, -beta, -local_alpha, ply + 1, start_time, time_limit);
             if score >= beta {
