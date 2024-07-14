@@ -4,16 +4,9 @@ use cozy_chess::*;
 use search::AlphaBetaSearcher;
 
 fn main() {
-    let mut board = Board::default();
-    let mut input = String::new();
-    let mut searcher = AlphaBetaSearcher::new();
-    // let mut btime: u64 = 0;
-    // let mut wtime: u64 = 0;
-    // let mut binc: u64 = 0;
-    // let mut winc: u64 = 0;
-    // let mut movestogo: u64 = 0;
-    // println!("The square B1 is {} when cast to usize", Square::B1 as usize);
-    // println!("evaluation of startpos: {}", searcher.pesto_evaluate(&board));
+    let mut board: Board = Board::default();
+    let mut input: String = String::new();
+    let mut searcher: AlphaBetaSearcher = AlphaBetaSearcher::new();
     loop {
         input.clear();
         searcher.clear_threefold_repetition();
@@ -33,7 +26,9 @@ fn main() {
             let moves = input.split_whitespace().skip(3);
             for m in moves {
                 match util::parse_uci_move(&board, m) {
-                    Ok(ucimove) => board.play(ucimove),
+                    Ok(ucimove) => {board.play(ucimove);
+                        searcher.add_to_threefold_repetition(board.hash());
+                    },
                     Err(e) => {
                         eprintln!("Failed to parse move: {}. Error: {:?}", m, e);
                         break;
