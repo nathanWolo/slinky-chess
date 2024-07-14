@@ -445,6 +445,10 @@ impl AlphaBetaSearcher {
                 if m.promotion.unwrap() != Piece::Queen {
                     score -= CAPTURE_BONUS * 2;
                 }
+                else {
+                    score += CAPTURE_BONUS;
+                
+                }
             }
             scores.push(score);
         }
@@ -597,13 +601,22 @@ impl AlphaBetaSearcher {
             }
             new_board.play(*m);
             self.threefold_repetition.push(new_board.hash());
+            //extension on promotion to queen
+            let mut mv_extension: i32 = 0;
+            if m.promotion.is_some() {
+                if m.promotion.unwrap() == Piece::Queen {
+                    mv_extension += 1;
+                }
+            }
+
+            let search_depth: i32 = depth + depth_modifier + mv_extension - 1;
             if i == 0 { //principal variation
-                score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -new_alpha, ply + 1, start_time, time_limit, extend_checks, can_null);
+                score = -self.pvs(&new_board, search_depth, -new_beta, -new_alpha, ply + 1, start_time, time_limit, extend_checks, can_null);
             }
             else {
-                score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, extend_checks, can_null);
+                score = -self.pvs(&new_board, search_depth, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, extend_checks, can_null);
                 if new_alpha < score && score < new_beta {
-                    score = -self.pvs(&new_board, depth - 1 + depth_modifier, -new_beta, -score, ply + 1, start_time, time_limit, extend_checks, can_null);
+                    score = -self.pvs(&new_board, search_depth, -new_beta, -score, ply + 1, start_time, time_limit, extend_checks, can_null);
                 }
             }
             self.threefold_repetition.pop();
