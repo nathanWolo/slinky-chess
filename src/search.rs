@@ -157,6 +157,7 @@ const EG_BISHOP_MATERIAL: i32 = 297;
 const EG_ROOK_MATERIAL: i32 = 512;
 const EG_QUEEN_MATERIAL: i32 = 936;
 const EG_KING_MATERIAL: i32 = 0;
+const TEMPO_BONUS: i32 = 5;
 
 impl AlphaBetaSearcher {
     pub fn new() -> Self {
@@ -305,12 +306,18 @@ impl AlphaBetaSearcher {
                 }
             }
         }
+        if board.side_to_move() == Color::White {
+            white_mg += TEMPO_BONUS;
+        }
+        else {
+            black_mg += TEMPO_BONUS;
+        }
+
         let mg: i32 = white_mg - black_mg;
         let eg: i32 = white_eg - black_eg;
         mg_phase = mg_phase.min(24);
         let eg_phase: i32 = 24 - mg_phase;
         score = (mg * mg_phase + eg * eg_phase)/ 24;
-        // score = mg;
         if board.side_to_move() == Color::Black {
             score = -score;
         }
