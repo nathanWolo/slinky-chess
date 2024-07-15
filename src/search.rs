@@ -615,10 +615,10 @@ impl AlphaBetaSearcher {
         best_score
     }
 
-    pub fn get_best_move(&mut self, board: &Board, time_remaining: u64, increment: u64) -> String {
+    pub fn get_best_move(&mut self, board: &Board, time_remaining: u64) -> String {
         let start_time: Instant = Instant::now();
-        let hard_limit: Duration = Duration::from_millis(time_remaining/20 + increment);
-        let soft_limit: Duration = Duration::from_millis(time_remaining/30 + increment/2);
+        let hard_limit: Duration = Duration::from_millis(time_remaining/10);
+        let soft_limit: Duration = Duration::from_millis(time_remaining/40);
         //do iterative deepening until we run out of time
         let mut current_depth: i32 = 1;
         let final_move: String;

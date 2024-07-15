@@ -70,8 +70,6 @@ fn main() {
             let mut i: usize = 0;
             let mut wtime: u64 = 0;
             let mut btime: u64 = 0;
-            let mut winc: u64 = 0;
-            let mut binc: u64 = 0;
             let mut movetime: u64 = 0;
             while i < words.len() {
                 match words[i] {
@@ -81,10 +79,8 @@ fn main() {
                                 match words[i] {
                                     "wtime" => wtime = value,
                                     "btime" => btime = value,
-                                    "winc" => winc = value,
-                                    "binc" => binc = value,
                                     "movetime" => movetime = value,
-                                    _ => unreachable!(),
+                                    _ => (),
                                 }
                             } else {
                                 eprintln!("Error parsing {}: Invalid number", words[i]);
@@ -122,13 +118,8 @@ fn main() {
                     movetime
                 }
             };
-            let increment: u64 = if board.side_to_move() == Color::White {
-                winc
-            } else {
-                binc
-            };
 
-            let best_move: String = searcher.get_best_move(&board, time_remaining, increment);
+            let best_move: String = searcher.get_best_move(&board, time_remaining);
             println!("bestmove {}", best_move);
         } else if input.starts_with("quit") {
             break;
