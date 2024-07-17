@@ -242,7 +242,23 @@ impl AlphaBetaSearcher {
                         black_eg += 5;
                     }
                 }
-
+            }
+            //doubled pawn malus
+            if *piece == Piece::Pawn {
+                for pawn in white.iter() {
+                    let file: BitBoard = pawn.file().bitboard();
+                    if (file & white).len() > 1 {
+                        white_mg -= 5;
+                        white_eg -= 10;
+                    }
+                }
+                for pawn in black.iter() {
+                    let file: BitBoard = pawn.file().bitboard();
+                    if (file & black).len() > 1 {
+                        black_mg -= 5;
+                        black_eg -= 10;
+                    }
+                }
             }
 
 
