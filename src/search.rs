@@ -330,10 +330,6 @@ impl AlphaBetaSearcher {
                 }
                 break;
             }
-            // else {
-            //     //history gravity, decrease all history values of moves that dont cause a beta cutoff
-            //     self.history_table[board.side_to_move() as usize][m.from as usize][m.to as usize] -= 1;
-            // }
         }
         let node_type: NodeType = if best_score <= alpha {
             NodeType::UpperBound

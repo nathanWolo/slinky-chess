@@ -45,6 +45,10 @@ pub fn pesto_evaluate_from_scratch(board: &Board) -> i32 {
                 white_eg += PAWN_DEFENDS_FRIEND_EG;
             
             }
+            if pawn_is_passed(board, square, Color::White) {
+                white_mg += PASSED_PAWN_TABLE_MG[square.relative_to(Color::Black) as usize];
+                white_eg += PASSED_PAWN_TABLE_EG[square.relative_to(Color::Black) as usize];
+            }
         }
     }
     for square in black.iter() {
@@ -71,6 +75,10 @@ pub fn pesto_evaluate_from_scratch(board: &Board) -> i32 {
             if pawn_defends_friend(board, square, Color::Black) {
                 black_mg += PAWN_DEFENDS_FRIEND_MG;
                 black_eg += PAWN_DEFENDS_FRIEND_EG;
+            }
+            if pawn_is_passed(board, square, Color::Black) {
+                black_mg += PASSED_PAWN_TABLE_MG[square as usize];
+                black_eg += PASSED_PAWN_TABLE_EG[square as usize];
             }
         }
     }
@@ -170,4 +178,27 @@ pub fn pawn_defends_friend(board: &Board, square: Square, side: Color) -> bool {
     let friendly_pieces: BitBoard = board.colors(side);
     let pawn_attacks: BitBoard = get_pawn_attacks(square, side);
     return !(pawn_attacks & friendly_pieces).is_empty();
+}
+
+pub fn pawn_is_passed(board: &Board, square: Square, side: Color)-> bool {
+    //check if the squares file and adjacent files are empty of enemy pawns
+    let mut file: BitBoard = square.file().bitboard() | square.file().adjacent();
+    let other_side: Color = match side {
+        Color::White => Color::Black,
+        Color::Black => Color::White,
+    };
+    //restrict the file bitboard to only squares ahead of the pawn
+    if side == Color::White {
+        let square_idx: usize = square as usize;
+        let destination_square_idx: usize = 56 + (square_idx % 8);
+        file &= get_between_rays(square, Square::index(destination_square_idx));
+    }
+    else {
+        let square_idx: usize = square as usize;
+        let destination_square_idx: usize = square_idx % 8;
+        file &= get_between_rays(square, Square::index(destination_square_idx));
+    }
+
+    let enemy_pawns: BitBoard = board.colored_pieces(other_side, Piece::Pawn);
+    return (file & enemy_pawns).is_empty();
 }

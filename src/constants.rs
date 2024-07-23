@@ -1,3 +1,4 @@
+
 pub const TT_BONUS: i32 = 1 << 24;
 pub const CAPTURE_BONUS: i32 = 1 << 20;
 pub const KILLER_BONUS: i32 = 1 << 20;
@@ -138,3 +139,24 @@ pub const DOUBLED_PAWNS_MG: i32 = -5;
 pub const DOUBLED_PAWNS_EG: i32 = -10;
 pub const PAWN_DEFENDS_FRIEND_MG: i32 = 5;
 pub const PAWN_DEFENDS_FRIEND_EG: i32 = 2;
+
+pub const PASSED_PAWN_TABLE_MG: [i32; 64] = [
+0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0,
+8, 8, 8, 8, 8, 8, 8, 8,
+6, 6, 6, 6, 6, 6, 6, 6,
+4, 4, 4, 4, 4, 4, 4, 4,
+2, 2, 2, 2, 2, 2, 2, 2,
+1, 1, 1, 1, 1, 1, 1, 1,
+0, 0, 0, 0, 0, 0, 0, 0,
+];
+pub const PASSED_PAWN_TABLE_EG: [i32; 64] = [
+0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0,
+16, 16, 16, 16, 16, 16, 16, 16,
+12, 12, 12, 12, 12, 12, 12, 12,
+8, 8, 8, 8, 8, 8, 8, 8,
+4, 4, 4, 4, 4, 4, 4, 4,
+2, 2, 2, 2, 2, 2, 2, 2,
+0, 0, 0, 0, 0, 0, 0, 0,
+];
