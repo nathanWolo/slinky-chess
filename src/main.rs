@@ -1,7 +1,6 @@
 mod search;
 mod constants;
 mod evaluation;
-mod accumulator_board;
 use cozy_chess::*;
 use search::AlphaBetaSearcher;
 

@@ -194,7 +194,7 @@ impl AlphaBetaSearcher {
         local_alpha
     }
 
-    fn pvs(&mut self, board: &Board, depth: i32, alpha: i32, beta: i32, ply:u32, start_time: Instant, time_limit: Duration, mut extend_checks: bool, can_null: bool) -> i32 {
+    fn pvs(&mut self, board: &Board, depth: i32, alpha: i32, beta: i32, ply:u32, start_time: Instant, time_limit: Duration, can_null: bool) -> i32 {
         self.nodes += 1;
         if board.status() != GameStatus::Ongoing {
             match board.status() {
@@ -203,27 +203,30 @@ impl AlphaBetaSearcher {
                 _ => (),
             };
         }
+        let root: bool = ply == 0;
         //check if there is a triplet in the threefold repetition stack
-        let mut threefold_count: i32 = 0;
-        for hash in self.threefold_repetition.iter() {
-            if *hash == board.hash() {
-                threefold_count += 1;
+        if !root {
+            let mut threefold_count: i32 = 0;
+            for hash in self.threefold_repetition.iter() {
+                if *hash == board.hash() {
+                    threefold_count += 1;
+                }
             }
-        }
-        if threefold_count >= 2 {
-            return 0;
+            if threefold_count >= 2 {
+                return 0;
+            }
         }
 
 
         //check extension: if in check, increase depth by 1
         let mut depth_modifier: i32 = 0;
         let in_check: bool = board.checkers().len() > 0;
-        if in_check  && ply != 0 && extend_checks{
+        if in_check  && !root{
             depth_modifier += 1;
-            extend_checks = false;
+            // extend_checks = false;
         }
 
-        if depth == 0  && depth_modifier == 0{
+        if depth + depth_modifier <= 0 {
             return self.quiesce(board, alpha, beta, ply, start_time, time_limit);
         }
         if start_time.elapsed() > time_limit {
@@ -236,7 +239,7 @@ impl AlphaBetaSearcher {
         let mut new_beta: i32 = beta;
         let entry: TTEntry = self.transposition_table[board.hash() as usize % TT_SIZE];
         let tt_move: Move = entry.best_move;
-        if entry.hash == board.hash() && entry.depth >= depth && ply != 0 && !pv_node {
+        if entry.hash == board.hash() && entry.depth >= depth && !root && !pv_node {
             match entry.node_type {
                 NodeType::Exact => return entry.score,
                 NodeType::LowerBound => new_alpha = alpha.max(entry.score),
@@ -248,7 +251,7 @@ impl AlphaBetaSearcher {
         }
         let mut can_fp: bool = false;
         //reverse futility pruning
-        if !pv_node && !in_check && ply != 0{
+        if !pv_node && !in_check && !root{
             let stand_pat: i32 = pesto_evaluate_from_scratch(board);
             if stand_pat - 90 * depth > beta && depth < 8{
                 return stand_pat;
@@ -256,7 +259,7 @@ impl AlphaBetaSearcher {
             //null move pruning
             if stand_pat >= beta && depth > 3 && !in_check && can_null{
                 let nulled_board: Board = board.clone().null_move().unwrap();
-                let score: i32 = -self.pvs(&nulled_board, depth - 3, -new_beta, -new_beta + 1, ply + 1, start_time, time_limit, extend_checks, false);
+                let score: i32 = -self.pvs(&nulled_board, depth - 3, -new_beta, -new_beta + 1, ply + 1, start_time, time_limit, false);
                 if score >= beta {
                     return beta;
                 }
@@ -281,7 +284,8 @@ impl AlphaBetaSearcher {
 
         let mut new_board = board.clone();
         for (i, m) in moves.iter().enumerate() {
-            if can_fp && i > 4 && !self.move_is_capture(board, m) {
+            let is_capture: bool = self.move_is_capture(board, m);
+            if can_fp && i > 4 && !is_capture {
                 continue;
             }
             new_board.play(*m);
@@ -296,12 +300,28 @@ impl AlphaBetaSearcher {
 
             let search_depth: i32 = depth + depth_modifier + mv_extension - 1;
             if i == 0 { //principal variation
-                score = -self.pvs(&new_board, search_depth, -new_beta, -new_alpha, ply + 1, start_time, time_limit, extend_checks, can_null);
+                score = -self.pvs(&new_board, search_depth, -new_beta, -new_alpha, ply + 1, start_time, time_limit, can_null);
             }
             else {
-                score = -self.pvs(&new_board, search_depth, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, extend_checks, can_null);
+                //lmr
+                // let mut lmr_reduction: i32 = 0;
+                // if i > 8 && !root && !in_check && depth > 2 {
+                //     let history_score = self.history_table[board.side_to_move() as usize][m.from as usize][m.to as usize];
+                //     let float_d = depth as f32;
+                //     let float_i = i as f32;
+                //     if is_capture {
+                //         lmr_reduction = (0.1 + float_d.ln() * float_i.ln() * 0.3) as i32;
+                //     }
+                //     else if history_score > 0{
+                //         lmr_reduction = (0.2 + float_d.ln() * float_i.ln() * 0.4) as i32;
+                //     }
+                //     else {
+                //         lmr_reduction = (0.3 + float_d.ln() * float_i.ln() * 0.5) as i32;
+                //     }
+                // }
+                score = -self.pvs(&new_board, search_depth, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, can_null);
                 if new_alpha < score && score < new_beta {
-                    score = -self.pvs(&new_board, search_depth, -new_beta, -score, ply + 1, start_time, time_limit, extend_checks, can_null);
+                    score = -self.pvs(&new_board, search_depth, -new_beta, -score, ply + 1, start_time, time_limit, can_null);
                 }
             }
             self.threefold_repetition.pop();
@@ -372,7 +392,7 @@ impl AlphaBetaSearcher {
         let mut beta: i32 = 99999999;
 
         while start_time.elapsed() < soft_limit && current_depth < 100 {
-            let score: i32 = self.pvs(board, current_depth, alpha, beta, 0, start_time, hard_limit, true, true);
+            let score: i32 = self.pvs(board, current_depth, alpha, beta, 0, start_time, hard_limit, true);
             if score <= alpha || score >= beta {
                 //fail high or low, re-search with gradual widening
                 aspiration_window *= 2;
