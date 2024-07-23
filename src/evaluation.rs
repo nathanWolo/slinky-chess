@@ -40,6 +40,11 @@ pub fn pesto_evaluate_from_scratch(board: &Board) -> i32 {
                 white_mg += DOUBLED_PAWNS_MG;
                 white_eg += DOUBLED_PAWNS_EG;
             }
+            if pawn_defends_friend(board, square, Color::White) {
+                white_mg += PAWN_DEFENDS_FRIEND_MG;
+                white_eg += PAWN_DEFENDS_FRIEND_EG;
+            
+            }
         }
     }
     for square in black.iter() {
@@ -62,6 +67,10 @@ pub fn pesto_evaluate_from_scratch(board: &Board) -> i32 {
             if pawn_is_doubled(board, square, Color::Black) {
                 black_mg += DOUBLED_PAWNS_MG;
                 black_eg += DOUBLED_PAWNS_EG;
+            }
+            if pawn_defends_friend(board, square, Color::Black) {
+                black_mg += PAWN_DEFENDS_FRIEND_MG;
+                black_eg += PAWN_DEFENDS_FRIEND_EG;
             }
         }
     }
@@ -154,4 +163,11 @@ pub fn piece_phase(piece: Piece) -> i32 {
         Piece::Queen => 4,
         _ => 0,
     }
+}
+
+pub fn pawn_defends_friend(board: &Board, square: Square, side: Color) -> bool {
+    //check if a pawn on the passed square defends a friendly piece
+    let friendly_pieces: BitBoard = board.colors(side);
+    let pawn_attacks: BitBoard = get_pawn_attacks(square, side);
+    return !(pawn_attacks & friendly_pieces).is_empty();
 }

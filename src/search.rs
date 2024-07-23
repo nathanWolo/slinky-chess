@@ -223,7 +223,6 @@ impl AlphaBetaSearcher {
         let in_check: bool = board.checkers().len() > 0;
         if in_check  && !root{
             depth_modifier += 1;
-            // extend_checks = false;
         }
 
         if depth + depth_modifier <= 0 {
@@ -303,22 +302,6 @@ impl AlphaBetaSearcher {
                 score = -self.pvs(&new_board, search_depth, -new_beta, -new_alpha, ply + 1, start_time, time_limit, can_null);
             }
             else {
-                //lmr
-                // let mut lmr_reduction: i32 = 0;
-                // if i > 8 && !root && !in_check && depth > 2 {
-                //     let history_score = self.history_table[board.side_to_move() as usize][m.from as usize][m.to as usize];
-                //     let float_d = depth as f32;
-                //     let float_i = i as f32;
-                //     if is_capture {
-                //         lmr_reduction = (0.1 + float_d.ln() * float_i.ln() * 0.3) as i32;
-                //     }
-                //     else if history_score > 0{
-                //         lmr_reduction = (0.2 + float_d.ln() * float_i.ln() * 0.4) as i32;
-                //     }
-                //     else {
-                //         lmr_reduction = (0.3 + float_d.ln() * float_i.ln() * 0.5) as i32;
-                //     }
-                // }
                 score = -self.pvs(&new_board, search_depth, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, can_null);
                 if new_alpha < score && score < new_beta {
                     score = -self.pvs(&new_board, search_depth, -new_beta, -score, ply + 1, start_time, time_limit, can_null);

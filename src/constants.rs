@@ -136,3 +136,5 @@ pub const ROOK_SEMI_OPEN_FILE_MG: i32 = 10;
 pub const ROOK_SEMI_OPEN_FILE_EG: i32 = 5;
 pub const DOUBLED_PAWNS_MG: i32 = -5;
 pub const DOUBLED_PAWNS_EG: i32 = -10;
+pub const PAWN_DEFENDS_FRIEND_MG: i32 = 5;
+pub const PAWN_DEFENDS_FRIEND_EG: i32 = 2;
