@@ -299,7 +299,7 @@ impl AlphaBetaSearcher {
 
             let search_depth: i32 = depth + depth_modifier + mv_extension - 1;
             //lmr
-            let mut lmr_depth = search_depth;
+            let mut lmr_depth: i32 = search_depth;
             if i > 7 && depth > 2 {
                 lmr_depth -= 1;
             }
@@ -308,10 +308,12 @@ impl AlphaBetaSearcher {
             }
             else {
                 score = -self.pvs(&new_board, lmr_depth, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, can_null);
-                if new_alpha < score && score < new_beta { //lmr re-search
-                    score = -self.pvs(&new_board, search_depth, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, can_null);
+                if new_alpha < score { 
+                    if lmr_depth < search_depth { //if it was an lmr node
+                        score = -self.pvs(&new_board, search_depth, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, can_null);
+                    }
                     //full re-search
-                    if new_alpha < score && score < new_beta {
+                    if new_alpha < score {
                         score = -self.pvs(&new_board, search_depth, -new_beta, -new_alpha, ply + 1, start_time, time_limit, can_null);
                     }
                 }
