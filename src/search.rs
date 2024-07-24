@@ -298,13 +298,22 @@ impl AlphaBetaSearcher {
             }
 
             let search_depth: i32 = depth + depth_modifier + mv_extension - 1;
+            //lmr
+            let mut lmr_depth = search_depth;
+            if i > 7 && depth > 2 {
+                lmr_depth -= 1;
+            }
             if i == 0 { //principal variation
                 score = -self.pvs(&new_board, search_depth, -new_beta, -new_alpha, ply + 1, start_time, time_limit, can_null);
             }
             else {
-                score = -self.pvs(&new_board, search_depth, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, can_null);
-                if new_alpha < score && score < new_beta {
-                    score = -self.pvs(&new_board, search_depth, -new_beta, -score, ply + 1, start_time, time_limit, can_null);
+                score = -self.pvs(&new_board, lmr_depth, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, can_null);
+                if new_alpha < score && score < new_beta { //lmr re-search
+                    score = -self.pvs(&new_board, search_depth, -new_alpha - 1, -new_alpha, ply + 1, start_time, time_limit, can_null);
+                    //full re-search
+                    if new_alpha < score && score < new_beta {
+                        score = -self.pvs(&new_board, search_depth, -new_beta, -new_alpha, ply + 1, start_time, time_limit, can_null);
+                    }
                 }
             }
             self.threefold_repetition.pop();
