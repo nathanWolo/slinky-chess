@@ -302,6 +302,9 @@ impl AlphaBetaSearcher {
             let mut lmr_depth: i32 = search_depth;
             if i > 7 && depth > 2 {
                 lmr_depth -= 1;
+                if !is_capture{
+                    lmr_depth -= 1;
+                }
             }
             if i == 0 { //principal variation
                 score = -self.pvs(&new_board, search_depth, -new_beta, -new_alpha, ply + 1, start_time, time_limit, can_null);
