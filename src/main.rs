@@ -27,7 +27,8 @@ fn main() {
             let moves = input.split_whitespace().skip(3);
             for m in moves {
                 match util::parse_uci_move(&board, m) {
-                    Ok(ucimove) => {board.play(ucimove);
+                    Ok(ucimove) => {
+                        board.play(ucimove);
                         searcher.add_to_threefold_repetition(board.hash());
                     },
                     Err(e) => {
@@ -92,16 +93,6 @@ fn main() {
                             i += 1;
                         }
                     },
-                    // "movestogo" => {
-                    //     if i + 1 < words.len() {
-                    //         if let Ok(value) = words[i + 1].parse::<u64>() {
-                    //             movestogo = value;
-                    //         } else {
-                    //             eprintln!("Error parsing movestogo: Invalid number");
-                    //         }
-                    //     }
-                    //     i += 2;
-                    // },
                     _ => i += 1,
                 }
             }

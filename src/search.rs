@@ -1,3 +1,4 @@
+use arrayvec::ArrayVec;
 use cozy_chess::*;
 use crate::constants::*;
 use crate::evaluation::*;
@@ -64,7 +65,7 @@ impl AlphaBetaSearcher {
         }
     }
 
-    fn score_moves(&self, _board: &Board, moves: &Vec<Move>, tt_move: Move, ply: u32) -> Vec<i32> {
+    fn score_moves(&self, _board: &Board, moves: &ArrayVec<[Move; 256]>, tt_move: Move, ply: u32) -> Vec<i32> {
         //take in a board and a list of moves and return a list of scores for each move
         let mut scores: Vec<i32> = Vec::new();
         scores.reserve(moves.len());
@@ -116,7 +117,7 @@ impl AlphaBetaSearcher {
         scores
     }
 
-    fn sort_moves(&self, moves: &mut Vec<Move>, scores: &mut Vec<i32>) {
+    fn sort_moves(&self, moves: &mut ArrayVec<[Move; 256]>, scores: &mut Vec<i32>) {
         let mut i = 1;
         while i < moves.len() {
             let mut j = i;
@@ -160,8 +161,7 @@ impl AlphaBetaSearcher {
         }
 
         let mut local_alpha: i32 = alpha.max(stand_pat);
-        let mut moves: Vec<Move> = Vec::new();
-        moves.reserve(16);
+        let mut moves = ArrayVec::<[Move; 256]>::new();
         board.generate_moves(|p: PieceMoves| {
             for m in p {
                 if self.move_is_capture(board, &m) {
@@ -269,8 +269,7 @@ impl AlphaBetaSearcher {
         }
 
         //generate all moves and store them in a vector
-        let mut moves: Vec<Move> = Vec::new();
-        moves.reserve(32);
+        let mut moves = ArrayVec::<[Move; 256]>::new();
         board.generate_moves(|p: PieceMoves| {
             for m in p {
                 moves.push(m);
