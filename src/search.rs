@@ -4,7 +4,7 @@ use crate::constants::*;
 use crate::evaluation::*;
 use std::str::FromStr;
 use std::time::{Duration, Instant};
-const TT_SIZE: usize = 1 << 22;
+const TT_SIZE: usize = 1 << 24;
 pub struct AlphaBetaSearcher {
     transposition_table: Vec<TTEntry>,
     root_best_move: Move,
@@ -16,11 +16,11 @@ pub struct AlphaBetaSearcher {
     threefold_repetition: Vec<u64>, //keep a running stack of boards seen in the DFS
 }
 #[derive(Clone, Copy)]
-struct TTEntry {
-    hash: u64,
-    depth: i32,
-    score: i32,
-    best_move: Move,
+struct TTEntry { // 16 bytes total
+    hash: u64, //4 bytes
+    depth: i32, //2 bytes
+    score: i32, //2 bytes
+    best_move: Move, // 8 bytes
     node_type: NodeType,
 }
 #[derive(Clone, Copy)]
