@@ -11,8 +11,8 @@ pub struct AlphaBetaSearcher {
     root_score: i32,
     min_val: i32,
     nodes: u64,
-    killer_table: Vec<Move>,
-    history_table: Vec<Vec<Vec<i32>>>,
+    killer_table: [Move; 128],
+    history_table: [[[i32; 64]; 64]; 2],
     threefold_repetition: Vec<u64>, //keep a running stack of boards seen in the DFS
 }
 #[derive(Clone, Copy)]
@@ -44,8 +44,10 @@ impl AlphaBetaSearcher {
                 best_move: Move::from_str("a1a1").unwrap(),
                 node_type: NodeType::Exact,
             }; TT_SIZE],
-            killer_table: vec![Move::from_str("a1a1").unwrap(); 128],
-            history_table: vec![vec![vec![0; 64]; 64]; 2],
+            // killer_table: vec![Move::from_str("a1a1").unwrap(); 128],
+            // history_table: vec![vec![vec![0; 64]; 64]; 2],
+            killer_table: [Move::from_str("a1a1").unwrap(); 128],
+            history_table: [[[0; 64]; 64]; 2],
             threefold_repetition: Vec::new(),
             nodes: 0,
         }
@@ -376,7 +378,8 @@ impl AlphaBetaSearcher {
         self.nodes = 0;
         self.root_best_move = Move::from_str("a1a1").unwrap();
         //clear history table
-        self.history_table = vec![vec![vec![0; 64]; 64]; 2];
+        // self.history_table = vec![vec![vec![0; 64]; 64]; 2];
+        self.history_table = [[[0; 64]; 64]; 2];
         // self.killer_table = vec![Move::from_str("a1a1").unwrap(); 128];
 
         let mut aspiration_window: i32 = 15;
