@@ -9,3 +9,7 @@ edition = "2021"
 cozy-chess = "0.3.4"
 rand = "0.8.5"
 arrayvec = "0.5"
+
+[profile.release]
+lto = true
+codegen-units = 1
