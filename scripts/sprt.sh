@@ -22,7 +22,7 @@ exec "$FASTCHESS" \
     -each proto=uci tc=4+0.04 \
     -openings file="$BOOK" format=epd order=random \
     -repeat \
-    -sprt elo0=0 elo1=5 alpha=0.05 beta=0.05 \
+    -sprt elo0=0 elo1=5 alpha=0.05 beta=0.05 model=logistic \
     -concurrency 4 \
     -rounds 100000 \
     -ratinginterval 10 \
