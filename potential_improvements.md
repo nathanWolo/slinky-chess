@@ -28,7 +28,6 @@ Ordered by expected Elo / confidence. One SPRT at a time.
 ### Move ordering / history
 
 - [ ] **Two killer slots** — second killer with a smaller bonus.
-- [ ] **Age history between searches instead of wiping** — divide by 2 at the start of each `go`.
 - [ ] **Stronger history gravity** — malus of `depth²` (not `-1`) on quiet moves that failed to cut, with a clamp.
 
 ### Search extras
@@ -69,3 +68,4 @@ Ordered by expected Elo / confidence. One SPRT at a time.
 ## Rejected (H0)
 
 - [x] **Qsearch searches check evasions** — did not pass H1. After 762 games: Elo -6.8 +/- 18.4, LOS 23.3 %, LLR -0.53. Not added.
+- [x] **Age history instead of wiping** — did not pass H1. After 740 games: Elo +2.8 +/- 18.3, LOS 61.9 %, LLR 0.02. Not added.
