@@ -32,7 +32,6 @@ Ordered by expected Elo / confidence. One SPRT at a time.
 
 ### Search extras
 
-- [ ] **Late-move pruning** — skip remaining quiets at low depth after a move-count threshold.
 - [ ] **Razoring** — at depth ≤ 2, if eval + margin < alpha, drop into qsearch and return on fail-low.
 - [ ] **Internal iterative reduction** — reduce non-PV nodes with no TT move at depth ≥ 4.
 - [ ] **NMP zugzwang guard** — skip null-move pruning in king+pawn endings; don't `unwrap()` `null_move()`.
@@ -59,6 +58,8 @@ Ordered by expected Elo / confidence. One SPRT at a time.
 - [ ] **ArrayVec for move scores** (moves already use ArrayVec)
 - [ ] **Release LTO + `codegen-units = 1`**
 
+To continue: build two binaries, then `scripts/sprt.sh ./bin/dev ./bin/baseline <name>`. Keep one pending item in the working tree at a time. If H1 is accepted, commit it and copy the dev binary over `bin/baseline`. Otherwise revert the patched files.
+
 ## Accepted (in baseline)
 
 - [x] **TT stores the node best move** — Elo difference: 82.9 +/- 21.7, LOS: 100.0 %, DrawRatio: 31.5 % SPRT: llr 2.95 (100.2%), lbound -2.94, ubound 2.94 — H1 was accepted (572 games, 4+0.04, `8mvs_big_+80_+109.epd`)
@@ -69,3 +70,4 @@ Ordered by expected Elo / confidence. One SPRT at a time.
 
 - [x] **Qsearch searches check evasions** — did not pass H1. After 762 games: Elo -6.8 +/- 18.4, LOS 23.3 %, LLR -0.53. Not added.
 - [x] **Age history instead of wiping** — did not pass H1. After 740 games: Elo +2.8 +/- 18.3, LOS 61.9 %, LLR 0.02. Not added.
+- [x] **Late-move pruning** (`depth <= 4`, skip quiets after `3 + depth²`) — H0 accepted. Elo -66.4 +/- 20.5, LOS 0.0 %, 710 games. Not added.
