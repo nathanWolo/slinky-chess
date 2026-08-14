@@ -27,7 +27,6 @@ Ordered by expected Elo / confidence. One SPRT at a time.
 
 ### Move ordering / history
 
-- [ ] **Killers and history only on quiet cutoffs** — currently updated on captures too.
 - [ ] **Two killer slots** — second killer with a smaller bonus.
 - [ ] **Age history between searches instead of wiping** — divide by 2 at the start of each `go`.
 - [ ] **Stronger history gravity** — malus of `depth²` (not `-1`) on quiet moves that failed to cut, with a clamp.
@@ -65,6 +64,7 @@ Ordered by expected Elo / confidence. One SPRT at a time.
 
 - [x] **TT stores the node best move** — Elo difference: 82.9 +/- 21.7, LOS: 100.0 %, DrawRatio: 31.5 % SPRT: llr 2.95 (100.2%), lbound -2.94, ubound 2.94 — H1 was accepted (572 games, 4+0.04, `8mvs_big_+80_+109.epd`)
 - [x] **Fix open-file detection** — Elo difference: 29.5 +/- 13.1, LOS: 100.0 %, DrawRatio: 36.1 % SPRT: llr 2.95 (100.2%), lbound -2.94, ubound 2.94 — H1 was accepted (1500 games, 4+0.04, `8mvs_big_+80_+109.epd`)
+- [x] **Killers and history only on quiet cutoffs** — Elo difference: 35.5 +/- 14.4, LOS: 100.0 %, DrawRatio: 33.9 % SPRT: llr 2.95 (100.1%), lbound -2.94, ubound 2.94 — H1 was accepted (1228 games, 4+0.04, `8mvs_big_+80_+109.epd`)
 
 ## Rejected (H0)
 
