@@ -23,7 +23,6 @@ Ordered by expected Elo / confidence. One SPRT at a time.
 
 ### Search correctness (likely large)
 
-- [ ] **Qsearch searches check evasions** — stand-pat is illegal in check; LMR can drop checking lines into qsearch.
 - [ ] **En passant counted as a capture** — `piece_on(to)` is empty for EP, so EP is ordered/pruned as a quiet. Needed before any capture-based pruning touches EP.
 
 ### Eval correctness
@@ -72,4 +71,4 @@ Ordered by expected Elo / confidence. One SPRT at a time.
 
 ## Rejected (H0)
 
-_None yet._
+- [x] **Qsearch searches check evasions** — did not pass H1. After 762 games: Elo -6.8 +/- 18.4, LOS 23.3 %, LLR -0.53. Not added.
