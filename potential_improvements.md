@@ -25,8 +25,6 @@ Ordered by expected Elo / confidence. One SPRT at a time.
 
 - [ ] **En passant counted as a capture** — `piece_on(to)` is empty for EP, so EP is ordered/pruned as a quiet. Needed before any capture-based pruning touches EP.
 
-### Eval correctness
-
 ### Move ordering / history
 
 - [ ] **Killers and history only on quiet cutoffs** — currently updated on captures too.
