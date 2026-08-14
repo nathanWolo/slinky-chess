@@ -72,8 +72,6 @@ fn main() {
             let mut i: usize = 0;
             let mut wtime: u64 = 0;
             let mut btime: u64 = 0;
-            let mut winc: u64 = 0;
-            let mut binc: u64 = 0;
             let mut movetime: u64 = 0;
             while i < words.len() {
                 match words[i] {
@@ -83,8 +81,6 @@ fn main() {
                                 match words[i] {
                                     "wtime" => wtime = value,
                                     "btime" => btime = value,
-                                    "winc" => winc = value,
-                                    "binc" => binc = value,
                                     "movetime" => movetime = value,
                                     _ => (),
                                 }
@@ -101,22 +97,21 @@ fn main() {
                 }
             }
             //if the input uses wtime/btime, use that, otherwise use movetime
-            let is_movetime = movetime > 0 && wtime == 0 && btime == 0;
-            let (time_remaining, increment) = if board.side_to_move() == Color::White {
+            let time_remaining = if board.side_to_move() == Color::White {
                 if wtime > 0 {
-                    (wtime, winc)
+                    wtime
                 } else {
-                    (movetime, 0)
+                    movetime
                 }
             } else {
                 if btime > 0 {
-                    (btime, binc)
+                    btime
                 } else {
-                    (movetime, 0)
+                    movetime
                 }
             };
 
-            let best_move: String = searcher.get_best_move(&board, time_remaining, increment, is_movetime);
+            let best_move: String = searcher.get_best_move(&board, time_remaining);
             println!("bestmove {}", best_move);
         } else if input.starts_with("quit") {
             break;

@@ -1,0 +1,76 @@
+# Potential strength improvements
+
+Each item is SPRTed **in isolation** against the current baseline. If H1 is accepted, the change is kept and becomes the new baseline. If H0 is accepted, it is reverted.
+
+## Test protocol
+
+Matches the existing `cutechess_commands.txt` setup as closely as this machine allows:
+
+| Setting | Value |
+|---|---|
+| Book | `8mvs_big_+80_+109.epd` (same file as local testing) |
+| TC | `4+0.04` |
+| SPRT | `elo0=0 elo1=5 alpha=0.05 beta=0.05` |
+| Games | 2 per opening, colors reversed (`-repeat`) |
+| Concurrency | 4 (this VM; original command used 12) |
+| Runner | `scripts/sprt.sh` via fastchess |
+
+Baseline starts at `master` (`1101744`, 400MB hash).
+
+## Pending
+
+Ordered by expected Elo / confidence. One SPRT at a time.
+
+### Search correctness (likely large)
+
+- [ ] **TT stores the node best move** — `TTEntry.best_move` currently saves `root_best_move` at every node, so TT move ordering almost never applies. Also only use the TT move when the stored hash matches.
+- [ ] **Qsearch searches check evasions** — stand-pat is illegal in check; LMR can drop checking lines into qsearch.
+- [ ] **En passant counted as a capture** — `piece_on(to)` is empty for EP, so EP is ordered/pruned as a quiet. Needed before any capture-based pruning touches EP.
+
+### Eval correctness
+
+- [ ] **Fix open-file detection** — `friendly_pawns & enemy_pawns` can never be set, so every rook gets the open-file bonus and semi-open files are dead code.
+
+### Move ordering / history
+
+- [ ] **Killers and history only on quiet cutoffs** — currently updated on captures too.
+- [ ] **Two killer slots** — second killer with a smaller bonus.
+- [ ] **Age history between searches instead of wiping** — divide by 2 at the start of each `go`.
+- [ ] **Stronger history gravity** — malus of `depth²` (not `-1`) on quiet moves that failed to cut, with a clamp.
+
+### Search extras
+
+- [ ] **Late-move pruning** — skip remaining quiets at low depth after a move-count threshold.
+- [ ] **Razoring** — at depth ≤ 2, if eval + margin < alpha, drop into qsearch and return on fail-low.
+- [ ] **Internal iterative reduction** — reduce non-PV nodes with no TT move at depth ≥ 4.
+- [ ] **NMP zugzwang guard** — skip null-move pruning in king+pawn endings; don't `unwrap()` `null_move()`.
+- [ ] **Adaptive NMP reduction** — `R = 3 + (depth-4)/4` instead of a fixed `R = 3`.
+- [ ] **Safer LMR** — do not reduce checks, in-check nodes, or (as aggressively) PV nodes.
+- [ ] **TT probe/store in qsearch** — reuse deeper hits; depth-preferred replacement so qsearch cannot clobber them.
+- [ ] **Qsearch promotions** — generate promotions, not only captures.
+- [ ] **Qsearch delta pruning** — skip captures that cannot raise alpha even with a margin.
+- [ ] **50-move draw detection** — return 0 at `halfmove_clock >= 100`.
+
+### Time management
+
+- [ ] **Use increment** — `winc`/`binc` are parsed and discarded. Soft/hard limits should include increment.
+- [ ] **`go movetime` spends the allotted time** — current soft limit is `movetime/40`.
+
+### Eval extras
+
+- [ ] **Isolated pawn penalty**
+- [ ] **Rook on the 7th** (enemy king on the 8th)
+
+### Speed (NPS)
+
+- [ ] **`play_unchecked` on generated legal moves**
+- [ ] **ArrayVec for move scores** (moves already use ArrayVec)
+- [ ] **Release LTO + `codegen-units = 1`**
+
+## Accepted (in baseline)
+
+_None yet._
+
+## Rejected (H0)
+
+_None yet._

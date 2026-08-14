@@ -34,19 +34,11 @@ pub fn pesto_evaluate_from_scratch(board: &Board) -> i32 {
                 white_mg += ROOK_SEMI_OPEN_FILE_MG;
                 white_eg += ROOK_SEMI_OPEN_FILE_EG;
             }
-            if rook_on_seventh(square, Color::White, board.king(Color::Black)) {
-                white_mg += ROOK_ON_SEVENTH_MG;
-                white_eg += ROOK_ON_SEVENTH_EG;
-            }
         }
         else if piece == Piece::Pawn {
             if pawn_is_doubled(board, square, Color::White) {
                 white_mg += DOUBLED_PAWNS_MG;
                 white_eg += DOUBLED_PAWNS_EG;
-            }
-            if pawn_is_isolated(board, square, Color::White) {
-                white_mg += ISOLATED_PAWN_MG;
-                white_eg += ISOLATED_PAWN_EG;
             }
             if pawn_defends_friend(board, square, Color::White) {
                 white_mg += PAWN_DEFENDS_FRIEND_MG;
@@ -74,19 +66,11 @@ pub fn pesto_evaluate_from_scratch(board: &Board) -> i32 {
                 black_mg += ROOK_SEMI_OPEN_FILE_MG;
                 black_eg += ROOK_SEMI_OPEN_FILE_EG;
             }
-            if rook_on_seventh(square, Color::Black, board.king(Color::White)) {
-                black_mg += ROOK_ON_SEVENTH_MG;
-                black_eg += ROOK_ON_SEVENTH_EG;
-            }
         }
         else if piece == Piece::Pawn {
             if pawn_is_doubled(board, square, Color::Black) {
                 black_mg += DOUBLED_PAWNS_MG;
                 black_eg += DOUBLED_PAWNS_EG;
-            }
-            if pawn_is_isolated(board, square, Color::Black) {
-                black_mg += ISOLATED_PAWN_MG;
-                black_eg += ISOLATED_PAWN_EG;
             }
             if pawn_defends_friend(board, square, Color::Black) {
                 black_mg += PAWN_DEFENDS_FRIEND_MG;
@@ -116,15 +100,17 @@ pub fn pesto_evaluate_from_scratch(board: &Board) -> i32 {
 }
 
 pub fn has_open_file(board: &Board, square: Square, side: Color) -> bool {
-    //open file: no pawns of either color on this file
+    //check if the piece on this square has access to an open file in front of it
+    //this is used for rooks
     let file: BitBoard = square.file().bitboard();
     let other_side: Color = match side {
         Color::White => Color::Black,
         Color::Black => Color::White,
     };
+    //check that there are no enemy pawns on the file
     let enemy_pawns: BitBoard = board.colored_pieces(other_side, Piece::Pawn);
     let friendly_pawns: BitBoard = board.colored_pieces(side, Piece::Pawn);
-    return (file & (friendly_pawns | enemy_pawns)).is_empty();
+    return (file & friendly_pawns & enemy_pawns).is_empty();
 }
 
 pub fn has_semi_open_file(board: &Board, square: Square, side: Color) -> bool {
@@ -140,18 +126,6 @@ pub fn pawn_is_doubled(board: &Board, square: Square, side: Color) -> bool {
     let file: BitBoard = square.file().bitboard();
     let friendly_pawns: BitBoard = board.colored_pieces(side, Piece::Pawn);
     return (file & friendly_pawns).len() > 1;
-}
-
-pub fn pawn_is_isolated(board: &Board, square: Square, side: Color) -> bool {
-    let friendly_pawns: BitBoard = board.colored_pieces(side, Piece::Pawn);
-    return (square.file().adjacent() & friendly_pawns).is_empty();
-}
-
-pub fn rook_on_seventh(square: Square, side: Color, enemy_king: Square) -> bool {
-    match side {
-        Color::White => square.rank() == Rank::Seventh && enemy_king.rank() == Rank::Eighth,
-        Color::Black => square.rank() == Rank::Second && enemy_king.rank() == Rank::First,
-    }
 }
 
 pub fn get_square_score_mg(square: Square, side: Color, piece: Piece) -> i32 {
@@ -227,59 +201,4 @@ pub fn pawn_is_passed(board: &Board, square: Square, side: Color)-> bool {
 
     let enemy_pawns: BitBoard = board.colored_pieces(other_side, Piece::Pawn);
     return (file & enemy_pawns).is_empty();
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn parse_board(fen: &str) -> Board {
-        Board::from_fen(fen, false).expect(fen)
-    }
-
-    #[test]
-    fn open_file_requires_no_pawns_on_file() {
-        // white rook on a1, pawns on both a-files would previously still count as open
-        // because friendly & enemy pawn bitboards can never overlap
-        let closed = parse_board("4k3/p7/8/8/8/8/P7/R3K3 w - - 0 1");
-        assert!(!has_open_file(&closed, Square::A1, Color::White));
-        assert!(!has_semi_open_file(&closed, Square::A1, Color::White));
-
-        let semi = parse_board("4k3/p7/8/8/8/8/8/R3K3 w - - 0 1");
-        assert!(!has_open_file(&semi, Square::A1, Color::White));
-        assert!(has_semi_open_file(&semi, Square::A1, Color::White));
-
-        let open = parse_board("4k3/8/8/8/8/8/8/R3K3 w - - 0 1");
-        assert!(has_open_file(&open, Square::A1, Color::White));
-    }
-
-    #[test]
-    fn isolated_pawn_has_no_friendly_neighbors() {
-        let board = parse_board("4k3/8/8/8/8/8/P1P5/4K3 w - - 0 1");
-        assert!(pawn_is_isolated(&board, Square::A2, Color::White));
-        assert!(pawn_is_isolated(&board, Square::C2, Color::White));
-
-        let connected = parse_board("4k3/8/8/8/8/8/PP6/4K3 w - - 0 1");
-        assert!(!pawn_is_isolated(&connected, Square::A2, Color::White));
-        assert!(!pawn_is_isolated(&connected, Square::B2, Color::White));
-    }
-
-    #[test]
-    fn rook_on_seventh_detects_relative_seventh() {
-        assert!(rook_on_seventh(Square::A7, Color::White, Square::E8));
-        assert!(!rook_on_seventh(Square::A7, Color::White, Square::E7));
-        assert!(rook_on_seventh(Square::A2, Color::Black, Square::E1));
-        assert!(!rook_on_seventh(Square::A1, Color::Black, Square::E1));
-    }
-
-    #[test]
-    fn open_file_rook_scores_higher_than_semi_open_with_same_material() {
-        // both sides have one pawn; only the a-file occupancy changes
-        let open = parse_board("4k3/1p6/8/8/8/8/1P6/R3K3 w - - 0 1");
-        let semi = parse_board("4k3/p7/8/8/8/8/1P6/R3K3 w - - 0 1");
-        assert!(has_open_file(&open, Square::A1, Color::White));
-        assert!(!has_open_file(&semi, Square::A1, Color::White));
-        assert!(has_semi_open_file(&semi, Square::A1, Color::White));
-        assert!(pesto_evaluate_from_scratch(&open) > pesto_evaluate_from_scratch(&semi));
-    }
 }

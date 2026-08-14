@@ -137,12 +137,8 @@ pub const ROOK_SEMI_OPEN_FILE_MG: i32 = 10;
 pub const ROOK_SEMI_OPEN_FILE_EG: i32 = 5;
 pub const DOUBLED_PAWNS_MG: i32 = -5;
 pub const DOUBLED_PAWNS_EG: i32 = -10;
-pub const ISOLATED_PAWN_MG: i32 = -8;
-pub const ISOLATED_PAWN_EG: i32 = -12;
 pub const PAWN_DEFENDS_FRIEND_MG: i32 = 5;
 pub const PAWN_DEFENDS_FRIEND_EG: i32 = 2;
-pub const ROOK_ON_SEVENTH_MG: i32 = 20;
-pub const ROOK_ON_SEVENTH_EG: i32 = 15;
 
 pub const PASSED_PAWN_TABLE_MG: [i32; 64] = [
 0, 0, 0, 0, 0, 0, 0, 0,
