@@ -59,6 +59,29 @@ impl AlphaBetaSearcher {
         self.threefold_repetition = Vec::new();
     }
 
+    fn to_standard_uci(board: &Board, m: Move) -> String {
+        // cozy-chess encodes castling as king-to-rook (e1h1). Match runners expect e1g1.
+        if board.piece_on(m.from) == Some(Piece::King)
+            && board.color_on(m.to) == Some(board.side_to_move())
+        {
+            let dest = if m.to.file() > m.from.file() {
+                match m.from.rank() {
+                    Rank::First => Square::G1,
+                    Rank::Eighth => Square::G8,
+                    _ => m.to,
+                }
+            } else {
+                match m.from.rank() {
+                    Rank::First => Square::C1,
+                    Rank::Eighth => Square::C8,
+                    _ => m.to,
+                }
+            };
+            return format!("{}{}", m.from, dest);
+        }
+        m.to_string()
+    }
+
     fn move_is_capture(&self, board: &Board, m: &Move) -> bool {
         let occupant: Option<Piece> = board.piece_on(m.to);
         match occupant {
@@ -401,17 +424,8 @@ impl AlphaBetaSearcher {
             println!("depth {} score cp {} NPS {}k", current_depth, score, (self.nodes as f32) / (start_time.elapsed().as_secs_f32() *1000.0));
             current_depth += 1;
         }
-        final_move = self.root_best_move.clone().to_string();
-        //check if final_move is legal
-        let mut legal_moves: Vec<String> = Vec::new();
-        board.generate_moves(|p: PieceMoves| {
-            for m in p {
-                legal_moves.push(m.to_string());
-            }
-            false
-        });
-        //if move is not legal, print move and fen to stderr and panic
-        if !legal_moves.contains(&final_move) {
+        final_move = Self::to_standard_uci(board, self.root_best_move);
+        if !board.is_legal(self.root_best_move) {
             panic!("Illegal move {} in position {}. Searched to depth {} with root_best_move {}", final_move, board, current_depth - 1, self.root_best_move);
         }
         println!("info depth {} score cp {} NPS {}k", current_depth - 1, self.root_score, (self.nodes as f32) / (start_time.elapsed().as_secs_f32() *1000.0));
