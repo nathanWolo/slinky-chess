@@ -110,7 +110,7 @@ pub fn has_open_file(board: &Board, square: Square, side: Color) -> bool {
     //check that there are no enemy pawns on the file
     let enemy_pawns: BitBoard = board.colored_pieces(other_side, Piece::Pawn);
     let friendly_pawns: BitBoard = board.colored_pieces(side, Piece::Pawn);
-    return (file & friendly_pawns & enemy_pawns).is_empty();
+    return (file & (friendly_pawns | enemy_pawns)).is_empty();
 }
 
 pub fn has_semi_open_file(board: &Board, square: Square, side: Color) -> bool {
