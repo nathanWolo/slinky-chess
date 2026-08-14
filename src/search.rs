@@ -262,8 +262,9 @@ impl AlphaBetaSearcher {
         let mut new_alpha: i32 = alpha;
         let mut new_beta: i32 = beta;
         let entry: TTEntry = self.transposition_table[board.hash() as usize % TT_SIZE];
-        let tt_move: Move = entry.best_move;
-        if entry.hash == board.hash() && entry.depth >= depth && !root && !pv_node {
+        let tt_hit: bool = entry.hash == board.hash();
+        let tt_move: Move = if tt_hit { entry.best_move } else { Move::from_str("a1a1").unwrap() };
+        if tt_hit && entry.depth >= depth && !root && !pv_node {
             match entry.node_type {
                 NodeType::Exact => return entry.score,
                 NodeType::LowerBound => new_alpha = alpha.max(entry.score),
@@ -304,6 +305,7 @@ impl AlphaBetaSearcher {
         let mut scores: Vec<i32> = self.score_moves(board, &moves, tt_move, ply);
         self.sort_moves(&mut moves, &mut scores);
         let mut score: i32;
+        let mut node_best_move: Move = tt_move;
 
         let mut new_board = board.clone();
         for (i, m) in moves.iter().enumerate() {
@@ -349,6 +351,7 @@ impl AlphaBetaSearcher {
             new_board = board.clone();
             if score > best_score {
                 best_score = score;
+                node_best_move = *m;
                 if (ply == 0) && (score.abs() != self.min_val.abs()) {
                     self.root_best_move = *m;
                     self.root_score = score;
@@ -382,7 +385,7 @@ impl AlphaBetaSearcher {
                 hash: board.hash(),
                 depth,
                 score: best_score,
-                best_move: self.root_best_move,
+                best_move: node_best_move,
                 node_type,
             };
             self.transposition_table[board.hash() as usize % TT_SIZE] = tt_entry;

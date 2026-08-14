@@ -23,7 +23,6 @@ Ordered by expected Elo / confidence. One SPRT at a time.
 
 ### Search correctness (likely large)
 
-- [ ] **TT stores the node best move** — `TTEntry.best_move` currently saves `root_best_move` at every node, so TT move ordering almost never applies. Also only use the TT move when the stored hash matches.
 - [ ] **Qsearch searches check evasions** — stand-pat is illegal in check; LMR can drop checking lines into qsearch.
 - [ ] **En passant counted as a capture** — `piece_on(to)` is empty for EP, so EP is ordered/pruned as a quiet. Needed before any capture-based pruning touches EP.
 
@@ -69,7 +68,7 @@ Ordered by expected Elo / confidence. One SPRT at a time.
 
 ## Accepted (in baseline)
 
-_None yet._
+- [x] **TT stores the node best move** — Elo difference: 82.9 +/- 21.7, LOS: 100.0 %, DrawRatio: 31.5 % SPRT: llr 2.95 (100.2%), lbound -2.94, ubound 2.94 — H1 was accepted (572 games, 4+0.04, `8mvs_big_+80_+109.epd`)
 
 ## Rejected (H0)
 
