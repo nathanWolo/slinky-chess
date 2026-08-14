@@ -359,14 +359,14 @@ impl AlphaBetaSearcher {
             }
             new_alpha = new_alpha.max(score);
             if new_alpha >= new_beta {
-                self.killer_table[ply as usize] = *m;
-                self.history_table[board.side_to_move() as usize][m.from as usize][m.to as usize] += depth * depth;
-                //history gravity
-                //decrease history for all prior moves that didnt cause the cutoff
-                //if the beta cutoff move was not a capture
-                if !self.move_is_capture(board, m) {
+                //killers and history are quiet-move heuristics
+                if !self.move_is_capture(board, m) && m.promotion.is_none() {
+                    self.killer_table[ply as usize] = *m;
+                    self.history_table[board.side_to_move() as usize][m.from as usize][m.to as usize] += depth * depth;
                     for j in 0..i {
-                        self.history_table[board.side_to_move() as usize][moves[j].from as usize][moves[j].to as usize] -= 1;
+                        if !self.move_is_capture(board, &moves[j]) && moves[j].promotion.is_none() {
+                            self.history_table[board.side_to_move() as usize][moves[j].from as usize][moves[j].to as usize] -= 1;
+                        }
                     }
                 }
                 break;
