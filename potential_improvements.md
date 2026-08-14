@@ -15,7 +15,7 @@ Matches the existing `cutechess_commands.txt` setup as closely as this machine a
 | Concurrency | 4 (this VM; original command used 12) |
 | Runner | `scripts/sprt.sh` via fastchess |
 
-Baseline starts at `master` (`1101744`, 400MB hash).
+Baseline starts at `master` (`1101744`, 400MB hash), plus a protocol-only change that prints standard UCI castling (`e1g1` instead of cozy-chess `e1h1`) so fastchess accepts the move. That is not a playing-strength change.
 
 ## Pending
 
