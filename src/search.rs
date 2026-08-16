@@ -83,10 +83,39 @@ impl AlphaBetaSearcher {
     }
 
     fn move_is_capture(&self, board: &Board, m: &Move) -> bool {
-        let occupant: Option<Piece> = board.piece_on(m.to);
-        match occupant {
-            Some(_) => true,
-            None => false,
+        if board.piece_on(m.to).is_some() {
+            return true;
+        }
+        // en passant: pawn captures onto the empty EP square
+        if let Some(ep_file) = board.en_passant() {
+            if m.to.file() == ep_file
+                && m.from.file() != m.to.file()
+                && board.piece_on(m.from) == Some(Piece::Pawn)
+            {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn captured_piece_value(&self, board: &Board, m: Move) -> i32 {
+        if let Some(piece) = board.piece_on(m.to) {
+            return self.piece_value(piece);
+        }
+        if self.move_is_capture(board, &m) {
+            return self.piece_value(Piece::Pawn);
+        }
+        0
+    }
+
+    fn mvv_lva_value(&self, piece: Piece) -> i32 {
+        match piece {
+            Piece::Pawn => 1,
+            Piece::Knight => 3,
+            Piece::Bishop => 3,
+            Piece::Rook => 5,
+            Piece::Queen => 9,
+            _ => 0,
         }
     }
 
@@ -101,25 +130,12 @@ impl AlphaBetaSearcher {
             }
             // Most valuable victim - least valuable attacker
             if self.move_is_capture(_board, m) {
-                let target: Option<Piece> = _board.piece_on(m.to);
                 let attacker: Piece = _board.piece_on(m.from).unwrap();
-                let attacker_value: i32 = match attacker {
-                    Piece::Pawn => 1,
-                    Piece::Knight => 3,
-                    Piece::Bishop => 3,
-                    Piece::Rook => 5,
-                    Piece::Queen => 9,
-                    _ => 0,
+                let target_value: i32 = match _board.piece_on(m.to) {
+                    Some(piece) => self.mvv_lva_value(piece),
+                    None => self.mvv_lva_value(Piece::Pawn), // en passant
                 };
-                let target_value: i32 = match target.unwrap() {
-                    Piece::Pawn => 1,
-                    Piece::Knight => 3,
-                    Piece::Bishop => 3,
-                    Piece::Rook => 5,
-                    Piece::Queen => 9,
-                    _ => 0,
-                };
-                score += target_value *20 - attacker_value + CAPTURE_BONUS;
+                score += target_value * 20 - self.mvv_lva_value(attacker) + CAPTURE_BONUS;
             }
             else if *m == self.killer_table[ply as usize] {
                 score += KILLER_BONUS; //TODO: revisit this constant
@@ -166,11 +182,7 @@ impl AlphaBetaSearcher {
     }
     fn see_worst_case(&self, b: &Board, m: Move) -> i32 {
         //assume piece will make move and immediately be lost for nothing
-        let cap_option: Option<Piece> = b.piece_on(m.to);
-        let cap_value: i32 = match cap_option {
-            Some(p) => self.piece_value(p),
-            None => 0,
-        };
+        let cap_value: i32 = self.captured_piece_value(b, m);
         let attacker_value: i32 = self.piece_value(b.piece_on(m.from).unwrap());
         cap_value - attacker_value
     }
@@ -433,5 +445,29 @@ impl AlphaBetaSearcher {
         }
         println!("info depth {} score cp {} NPS {}k", current_depth - 1, self.root_score, (self.nodes as f32) / (start_time.elapsed().as_secs_f32() *1000.0));
         return final_move;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn en_passant_counts_as_capture() {
+        let board = Board::from_fen("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", false).unwrap();
+        let searcher = AlphaBetaSearcher::new();
+        let ep = Move {
+            from: Square::E5,
+            to: Square::D6,
+            promotion: None,
+        };
+        assert!(searcher.move_is_capture(&board, &ep));
+        assert_eq!(searcher.captured_piece_value(&board, ep), 100);
+        let quiet = Move {
+            from: Square::E1,
+            to: Square::E2,
+            promotion: None,
+        };
+        assert!(!searcher.move_is_capture(&board, &quiet));
     }
 }
