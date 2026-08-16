@@ -21,10 +21,6 @@ Baseline starts at `master` (`1101744`, 400MB hash), plus a protocol-only change
 
 Ordered by expected Elo / confidence. One SPRT at a time.
 
-### Search correctness (likely large)
-
-- [ ] **En passant counted as a capture** — `piece_on(to)` is empty for EP, so EP is ordered/pruned as a quiet. Needed before any capture-based pruning touches EP.
-
 ### Move ordering / history
 
 - [ ] **Two killer slots** — second killer with a smaller bonus.
@@ -71,3 +67,4 @@ To continue: build two binaries, then `scripts/sprt.sh ./bin/dev ./bin/baseline 
 - [x] **Qsearch searches check evasions** — did not pass H1. After 762 games: Elo -6.8 +/- 18.4, LOS 23.3 %, LLR -0.53. Not added.
 - [x] **Age history instead of wiping** — did not pass H1. After 740 games: Elo +2.8 +/- 18.3, LOS 61.9 %, LLR 0.02. Not added.
 - [x] **Late-move pruning** (`depth <= 4`, skip quiets after `3 + depth²`) — H0 accepted. Elo -66.4 +/- 20.5, LOS 0.0 %, 710 games. Not added.
+- [x] **En passant counted as a capture** — did not pass H1. After 920 games: Elo -0.4 +/- 15.4, LOS 48.1 %, LLR -0.23. Too rare to show at 4+0.04; not added.
