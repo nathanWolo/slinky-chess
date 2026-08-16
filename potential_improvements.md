@@ -9,13 +9,17 @@ Matches the existing `cutechess_commands.txt` setup as closely as this machine a
 | Setting | Value |
 |---|---|
 | Book | `8mvs_big_+80_+109.epd` (same file as local testing) |
-| TC | `4+0.04` |
+| TC | `4+0.04` (override with `TC=`, e.g. `TC=6+0.06`) |
 | SPRT | `elo0=0 elo1=5 alpha=0.05 beta=0.05` |
 | Games | 2 per opening, colors reversed (`-repeat`) |
 | Concurrency | 4 (this VM; original command used 12) |
 | Runner | `scripts/sprt.sh` via fastchess |
 
 Baseline starts at `master` (`1101744`, 400MB hash), plus a protocol-only change that prints standard UCI castling (`e1g1` instead of cozy-chess `e1h1`) so fastchess accepts the move. That is not a playing-strength change.
+
+## In progress
+
+- [ ] **En passant counted as a capture** — no H1 at 4+0.04 (Elo -0.4 +/- 15.4, 920 games, LLR -0.23). Retesting at **6+0.06** until H0 or H1.
 
 ## Pending
 
@@ -67,4 +71,4 @@ To continue: build two binaries, then `scripts/sprt.sh ./bin/dev ./bin/baseline 
 - [x] **Qsearch searches check evasions** — did not pass H1. After 762 games: Elo -6.8 +/- 18.4, LOS 23.3 %, LLR -0.53. Not added.
 - [x] **Age history instead of wiping** — did not pass H1. After 740 games: Elo +2.8 +/- 18.3, LOS 61.9 %, LLR 0.02. Not added.
 - [x] **Late-move pruning** (`depth <= 4`, skip quiets after `3 + depth²`) — H0 accepted. Elo -66.4 +/- 20.5, LOS 0.0 %, 710 games. Not added.
-- [x] **En passant counted as a capture** — did not pass H1. After 920 games: Elo -0.4 +/- 15.4, LOS 48.1 %, LLR -0.23. Too rare to show at 4+0.04; not added.
+- [x] **En passant counted as a capture** at 4+0.04 — did not pass H1. After 920 games: Elo -0.4 +/- 15.4, LOS 48.1 %, LLR -0.23. Too rare to show at that TC; retrying at 6+0.06 (see In progress).

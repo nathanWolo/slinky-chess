@@ -13,13 +13,17 @@ NAME="$3"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BOOK="${BOOK:-$ROOT/books/8mvs_big_+80_+109.epd}"
 FASTCHESS="${FASTCHESS:-$ROOT/tools/fastchess-linux-x86-64/fastchess}"
+TC="${TC:-4+0.04}"
 OUT_DIR="$ROOT/sprt"
 mkdir -p "$OUT_DIR"
+OUT="$OUT_DIR/${NAME}.out"
 
-exec "$FASTCHESS" \
+echo "SPRT $NAME: $DEV vs $BASE  tc=$TC  book=$BOOK" | tee "$OUT"
+
+"$FASTCHESS" \
     -engine name=dev cmd="$DEV" \
     -engine name=baseline cmd="$BASE" \
-    -each proto=uci tc=4+0.04 \
+    -each proto=uci tc="$TC" \
     -openings file="$BOOK" format=epd order=random \
     -repeat \
     -sprt elo0=0 elo1=5 alpha=0.05 beta=0.05 model=logistic \
@@ -28,4 +32,5 @@ exec "$FASTCHESS" \
     -ratinginterval 10 \
     -draw movenumber=80 movecount=8 score=15 \
     -pgnout file="$OUT_DIR/${NAME}.pgn" \
-    -log file="$OUT_DIR/${NAME}.log"
+    -log file="$OUT_DIR/${NAME}.log" \
+    2>&1 | tee -a "$OUT"
